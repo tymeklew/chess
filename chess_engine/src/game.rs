@@ -46,11 +46,9 @@ impl Game {
     pub fn mv(&mut self, mv: Move) -> bool {
         match mv {
             Move::Basic(start, end) => {
-                self.board.set(end, self.board.get(start.clone()));
-                self.board.set(start, None);
-                /* TODO
-                Make it so that when the piece is moved the has_moved value is updated
-                */
+                self.board.moved(&start);
+                self.board.set(&end, self.board.get(&start));
+                self.board.set(&start, None);
             }
             _ => {}
         }

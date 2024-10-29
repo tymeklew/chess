@@ -3,7 +3,7 @@ use crate::{
     game::{Move, Position},
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Colour {
     White,
     Black,
@@ -54,9 +54,13 @@ impl Piece {
 
     pub fn available_moves(&self, pos: Position, board: &Board) -> Vec<Move> {
         match self.piece_type {
-            PieceType::Pawn => valid_pawn_moves(pos, board, self.has_moved),
+            PieceType::Pawn => valid_pawn_moves(pos, board, self.has_moved, self.colour),
             _ => vec![],
         }
+    }
+
+    pub fn moved(&mut self) {
+        self.has_moved = true;
     }
 
     pub fn is_legal_move(&self, mov: Move) -> bool {
@@ -64,19 +68,25 @@ impl Piece {
     }
 }
 
-fn valid_pawn_moves(pos: Position, board: &Board, has_moved: bool) -> Vec<Move> {
-    let mut moves = Vec::new();
+const BOUNDS: (i8, i8) = (0, 7);
+fn bounded_add(n1: i8, n2: i8) -> Option<i8> {
+    if (n1 + n2) >= 0 && (n1 + n2) <= 7 {
+        return Some(n1 + n2);
+    }
+    None
+}
 
-    if pos.row <= 5 {
-        moves.push(Move::Basic(
-            pos.clone(),
-            Position::new(pos.row + 1, pos.col),
-        ));
-        if pos.row <= 6 && !has_moved {
-            moves.push(Move::Basic(
-                pos.clone(),
-                Position::new(pos.row + 2, pos.col),
-            ));
+fn valid_pawn_moves(pos: Position, board: &Board, has_moved: bool, colour: Colour) -> Vec<Move> {
+    let mut moves = Vec::new();
+    let offsets = [(-1, 1), (1, 1)];
+
+    for (c_offset, r_offset) in offsets {
+        match (
+            bounded_add(pos.col, c_offset),
+            bounded_add(pos.row, r_offset),
+        ) {
+            (None, None) => {}
+            _ => {}
         }
     }
 
