@@ -30,11 +30,12 @@ mod tests {
             Position { col: 0, row: 3 },
         ));
 
+        game.mv(game::Move::Basic(Position::new(1, 6), Position::new(1, 4)));
+
         let moves = game
             .board
-            .get(Position::new(0, 3))
+            .get(&Position::new(0, 3))
             .unwrap()
-            .piece_type()
             .available_moves(Position::new(0, 3), &game.board);
 
         println!("{:?}", moves);
