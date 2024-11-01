@@ -78,14 +78,48 @@ fn bounded_add(n1: i8, n2: i8) -> Option<i8> {
 
 fn valid_pawn_moves(pos: Position, board: &Board, has_moved: bool, colour: Colour) -> Vec<Move> {
     let mut moves = Vec::new();
-    let offsets = [(-1, 1), (1, 1)];
+
+    let (direction, offsets) = match colour {
+        Colour::Black => (-1, [(-1, -1), (1, -1)]),
+        Colour::White => (1, [(-1, 1), (1, 1)]),
+    };
+
+    if !has_moved
+        && board
+            .get(&Position::new(pos.col, pos.row + direction))
+            .is_none()
+        && board
+            .get(&Position::new(pos.col, pos.row + 2 * direction))
+            .is_none()
+    {
+        moves.push(Move::Basic(
+            pos.clone(),
+            Position::new(pos.col, pos.row + 2 * direction),
+        ));
+    }
+
+    if board
+        .get(&Position::new(pos.col, pos.row + direction))
+        .is_none()
+    {
+        moves.push(Move::Basic(
+            pos.clone(),
+            Position::new(pos.col, pos.row + direction),
+        ))
+    }
 
     for (c_offset, r_offset) in offsets {
         match (
             bounded_add(pos.col, c_offset),
             bounded_add(pos.row, r_offset),
         ) {
-            (None, None) => {}
+            (Some(col), Some(row)) => match board.get(&Position::new(col, row)) {
+                Some(piece) if piece.colour() != colour => {
+                    moves.push(Move::Basic(pos.clone(), Position::new(col, row)))
+                }
+                _ => continue,
+            },
+
             _ => {}
         }
     }
