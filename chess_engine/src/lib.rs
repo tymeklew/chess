@@ -25,6 +25,14 @@ mod tests {
         let mut game = Game::new();
         println!("{}", game.board);
 
+        println!(
+            "{:?}",
+            game.board
+                .get(&Position::new(0, 1))
+                .unwrap()
+                .available_moves(Position::new(0, 1), &game.board)
+        );
+
         game.mv(game::Move::Basic(
             Position { col: 0, row: 1 },
             Position { col: 0, row: 3 },
