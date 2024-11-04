@@ -5,7 +5,7 @@ mod pieces;
 #[cfg(test)]
 mod tests {
 
-    use game::{Game, Position};
+    use game::{Game, Move, Position};
 
     use super::*;
 
@@ -25,30 +25,11 @@ mod tests {
         let mut game = Game::new();
         println!("{}", game.board);
 
-        println!(
-            "{:?}",
-            game.board
-                .get(&Position::new(0, 1))
-                .unwrap()
-                .available_moves(Position::new(0, 1), &game.board)
-        );
+        println!("{:?}", game.available_moves(Position::new(0, 1)));
 
-        game.mv(game::Move::Basic(
-            Position { col: 0, row: 1 },
-            Position { col: 0, row: 3 },
-        ));
+        game.mv(Move::b(0, 1, 0, 3));
 
         game.mv(game::Move::Basic(Position::new(1, 6), Position::new(1, 4)));
-
-        let moves = game
-            .board
-            .get(&Position::new(0, 3))
-            .unwrap()
-            .available_moves(Position::new(0, 3), &game.board);
-
-        println!("{:?}", moves);
-
-        println!("{}", game.board);
 
         assert_eq!(1, 1);
     }

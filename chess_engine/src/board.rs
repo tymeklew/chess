@@ -38,6 +38,36 @@ impl Default for Board {
             );
         }
 
+        let ranks = [0, 7];
+        let colour = [Colour::White, Colour::Black];
+
+        for (i, piece) in [PieceType::Rook, PieceType::Knight, PieceType::Bishop]
+            .iter()
+            .enumerate()
+        {
+            for j in 0..2 {
+                board.set(
+                    &Position::new(i as i8, ranks[j]),
+                    Some(Piece::new(colour[j], *piece)),
+                );
+                board.set(
+                    &Position::new(7 - i as i8, ranks[j]),
+                    Some(Piece::new(colour[j], *piece)),
+                );
+            }
+        }
+
+        for i in 0..2 {
+            board.set(
+                &Position::new(3, ranks[i]),
+                Some(Piece::new(colour[i], PieceType::Queen)),
+            );
+            board.set(
+                &Position::new(4, ranks[i]),
+                Some(Piece::new(colour[i], PieceType::King)),
+            );
+        }
+
         board
     }
 }
