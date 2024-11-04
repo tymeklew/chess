@@ -105,7 +105,7 @@ fn valid_pawn_moves(pos: Position, board: &Board, has_moved: bool, colour: Colou
         moves.push(Move::Basic(
             pos.clone(),
             Position::new(pos.col, pos.row + direction),
-        ))
+        ));
     }
 
     for (c_offset, r_offset) in offsets {

@@ -26,6 +26,12 @@ pub enum Move {
     Promotion(Position, Position, pieces::Piece),
 }
 
+impl Move {
+    pub fn b(s_col: i8, s_row: i8, e_col: i8, e_row: i8) -> Self {
+        Move::Basic(Position::new(s_col, s_row), Position::new(e_col, e_row))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum CastleType {
     KingSide,
@@ -34,24 +40,33 @@ pub enum CastleType {
 
 pub struct Game {
     pub board: Board,
+    pub turn: usize,
 }
 
 impl Game {
     pub fn new() -> Self {
         Self {
             board: Board::default(),
+            turn: 0,
         }
     }
 
     pub fn mv(&mut self, mv: Move) -> bool {
-        match mv {
+        match mv.clone() {
             Move::Basic(start, end) => {
                 self.board.moved(&start);
                 self.board.set(&end, self.board.get(&start));
                 self.board.set(&start, None);
             }
-            _ => {}
+            _ => return false,
         }
         return true;
+    }
+
+    pub fn available_moves(&self, pos: Position) -> Option<Vec<Move>> {
+        match self.board.get(&pos) {
+            Some(piece) => Some(piece.available_moves(pos, &self.board)),
+            None => None,
+        }
     }
 }
