@@ -1,4 +1,5 @@
 mod game;
+mod player;
 
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
@@ -12,6 +13,7 @@ use futures::SinkExt;
 use futures::StreamExt;
 use game::{Game, GameMessage};
 use log::info;
+use player::Player;
 use std::collections::HashMap;
 use std::env;
 use std::net::SocketAddr;
@@ -20,31 +22,32 @@ use tokio::sync::mpsc::{self, Receiver, Sender};
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+const CHANNEL_BUFFER: usize = 100;
+
 pub struct AppState {
-    games: HashMap<u8, Game>,
+    games: Vec<Game>,
+    game_count: usize,
 }
 
 impl AppState {
+    pub fn new() -> Self {
+        Self {
+            games: Vec::with_capacity(10),
+            game_count: 0,
+        }
+    }
     // ->
     pub fn new_game(&mut self) {
-        let (tx, rx) = mpsc::channel(100);
-        let mut game = Game { tx };
+        /*let (tx, rx) = mpsc::channel(100);
+        let mut game = Game::new(tx);
         game.start(rx);
-        self.games.insert(0, game);
+        self.games.push(game);*/
+        todo!()
     }
 
-    // -> (Send to game , Recieve from game)
-    pub async fn join(&mut self) -> (Sender<GameMessage>, Receiver<GameMessage>) {
-        if self.games.len() < 1 {
-            self.new_game();
-        }
-        // Sender for the game
-        let game_sender = self.games.get(&0_u8).unwrap().tx.clone();
-        let (tx, rx) = mpsc::channel(100);
-
-        game_sender.send(GameMessage::Join(tx)).await.unwrap();
-
-        (game_sender, rx)
+    pub async fn join(&mut self, socket: WebSocket) {
+        let tx = self.games.first().unwrap().tx.clone();
+        tx.send(GameMessage::Join(socket)).await.unwrap();
     }
 }
 
@@ -69,9 +72,7 @@ async fn main() {
         Err(_) => "8080".to_string(),
     };
 
-    let state = Arc::new(Mutex::new(AppState {
-        games: HashMap::new(),
-    }));
+    let state = Arc::new(Mutex::new(AppState::new()));
     //let cors = CorsLayer::new();
 
     let app = Router::new()
@@ -113,10 +114,9 @@ async fn ws_handler(
 }
 
 async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<AppState>>) {
-    let (mut sender, mut reciever) = socket.split();
-    let (tx, mut rx) = state.lock().await.join().await;
+    state.lock().await.join(socket).await;
 
-    if sender.send(Message::Ping(vec![1, 2, 3])).await.is_ok() {
+    /*if sender.send(Message::Ping(vec![1, 2, 3])).await.is_ok() {
         println!("Pinged {addr}");
     } else {
         return;
@@ -138,5 +138,5 @@ async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<App
             }
             _ => {}
         }
-    }
+    }*/
 }
