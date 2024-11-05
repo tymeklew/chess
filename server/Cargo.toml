@@ -12,3 +12,5 @@ log = "0.4.22"
 tokio = { version = "1.41.0", features = ["full"] }
 tower-http = { version = "0.6.1", features = ["cors", "trace"] }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+chess_engine = { path = "../chess_engine" }
+futures = "0.3.31"
