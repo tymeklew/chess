@@ -2,6 +2,8 @@ mod board;
 mod game;
 mod pieces;
 
+pub use game::Game;
+
 #[cfg(test)]
 mod tests {
 
