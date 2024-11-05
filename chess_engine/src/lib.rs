@@ -3,6 +3,7 @@ mod game;
 mod pieces;
 
 pub use game::Game;
+pub use game::Move;
 
 #[cfg(test)]
 mod tests {

@@ -112,7 +112,7 @@ async fn ws_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, addr, state))
 }
 
-async fn handle_socket(mut socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<AppState>>) {
+async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<AppState>>) {
     let (mut sender, mut reciever) = socket.split();
     let (tx, mut rx) = state.lock().await.join().await;
 
