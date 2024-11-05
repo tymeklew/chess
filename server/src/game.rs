@@ -1,5 +1,6 @@
 pub enum GameMessage {
     Text(String),
+    Move(chess_engine::Move),
     Join(Sender<GameMessage>),
 }
 use log::info;
@@ -22,6 +23,7 @@ impl Game {
                             p.send(GameMessage::Text(txt.clone())).await.unwrap();
                         }
                     }
+                    _ => {}
                 }
             }
         });
