@@ -1,28 +1,38 @@
+use crate::{player::Player, CHANNEL_BUFFER};
+use axum::extract::ws::WebSocket;
+use futures::lock::Mutex;
+use std::sync::Arc;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
+use uuid::Uuid;
+
 pub enum GameMessage {
     Text(String),
     Move(chess_engine::Move),
-    Join(Sender<GameMessage>),
+    Join(WebSocket),
 }
-use log::info;
-use tokio::sync::mpsc::{Receiver, Sender};
+
 pub struct Game {
+    pub id: Uuid,
     //pub game: chess_engine::Game,
     pub tx: Sender<GameMessage>,
+    pub players: Arc<Mutex<Vec<Player>>>,
 }
 
 impl Game {
+    pub fn new(tx: Sender<GameMessage>) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            tx,
+            players: Arc::new(Mutex::new(Vec::with_capacity(2))),
+        }
+    }
     pub fn start(&mut self, mut rx: Receiver<GameMessage>) {
         tokio::spawn(async move {
-            let mut players = Vec::new();
+            //let mut players = Vec::new();
             while let Some(msg) = rx.recv().await {
                 match msg {
-                    GameMessage::Join(sender) => players.push(sender),
-                    GameMessage::Text(txt) => {
-                        info!("Recieved message sending to : {}", players.len());
-                        for p in players.iter() {
-                            p.send(GameMessage::Text(txt.clone())).await.unwrap();
-                        }
-                    }
+                    GameMessage::Join(socket) => {}
+                    GameMessage::Text(txt) => {}
                     _ => {}
                 }
             }

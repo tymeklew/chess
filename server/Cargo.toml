@@ -14,3 +14,4 @@ tower-http = { version = "0.6.1", features = ["cors", "trace"] }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 chess_engine = { path = "../chess_engine" }
 futures = "0.3.31"
+uuid = { version = "1.11.0", features = ["v4"] }
