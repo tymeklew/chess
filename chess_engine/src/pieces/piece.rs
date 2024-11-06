@@ -68,7 +68,6 @@ impl Piece {
     }
 }
 
-const BOUNDS: (i8, i8) = (0, 7);
 fn bounded_add(n1: i8, n2: i8) -> Option<i8> {
     if (n1 + n2) >= 0 && (n1 + n2) <= 7 {
         return Some(n1 + n2);
