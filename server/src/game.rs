@@ -1,5 +1,4 @@
 use crate::{player::Player, CHANNEL_BUFFER};
-use axum::extract::ws::WebSocket;
 use futures::lock::Mutex;
 use std::sync::Arc;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -8,7 +7,7 @@ use uuid::Uuid;
 pub enum GameMessage {
     Text(String),
     Move(chess_engine::Move),
-    Join(WebSocket),
+    Join(Sender<GameMessage>),
 }
 
 pub struct Game {
@@ -28,11 +27,17 @@ impl Game {
     }
     pub fn start(&mut self, mut rx: Receiver<GameMessage>) {
         tokio::spawn(async move {
-            //let mut players = Vec::new();
+            let mut players = Vec::new();
             while let Some(msg) = rx.recv().await {
                 match msg {
-                    GameMessage::Join(socket) => {}
-                    GameMessage::Text(txt) => {}
+                    GameMessage::Join(tx) => {
+                        players.push(tx);
+                    }
+                    GameMessage::Text(txt) => {
+                        for p in &players {
+                            let _ = p.send(GameMessage::Text(txt.clone())).await;
+                        }
+                    }
                     _ => {}
                 }
             }

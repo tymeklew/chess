@@ -9,16 +9,13 @@ use axum::Router;
 use axum_extra::headers::UserAgent;
 use axum_extra::TypedHeader;
 use futures::lock::Mutex;
-use futures::SinkExt;
-use futures::StreamExt;
+use futures::{SinkExt, StreamExt};
 use game::{Game, GameMessage};
 use log::info;
-use player::Player;
-use std::collections::HashMap;
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::sync::mpsc::{self, Receiver, Sender};
+use tokio::sync::mpsc::{self, channel, Receiver, Sender};
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -38,16 +35,21 @@ impl AppState {
     }
     // ->
     pub fn new_game(&mut self) {
-        /*let (tx, rx) = mpsc::channel(100);
+        let (tx, rx) = mpsc::channel(100);
         let mut game = Game::new(tx);
         game.start(rx);
-        self.games.push(game);*/
-        todo!()
+        self.games.push(game);
     }
 
-    pub async fn join(&mut self, socket: WebSocket) {
-        let tx = self.games.first().unwrap().tx.clone();
-        tx.send(GameMessage::Join(socket)).await.unwrap();
+    pub async fn join(&mut self) -> (Sender<GameMessage>, Receiver<GameMessage>) {
+        if self.games.is_empty() {
+            self.new_game();
+        }
+
+        let game_sender = self.games.first().unwrap().tx.clone();
+        let (tx, rx) = channel::<GameMessage>(CHANNEL_BUFFER);
+        let _ = game_sender.send(GameMessage::Join(tx)).await;
+        (game_sender, rx)
     }
 }
 
@@ -114,22 +116,19 @@ async fn ws_handler(
 }
 
 async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<AppState>>) {
-    state.lock().await.join(socket).await;
-
-
-    
-
-    /*if sender.send(Message::Ping(vec![1, 2, 3])).await.is_ok() {
-        println!("Pinged {addr}");
-    } else {
-        return;
-    }
+    let (mut sender, mut reciever) = socket.split();
+    let (tx, mut rx) = state.lock().await.join().await;
 
     tokio::spawn(async move {
-        while let Some(Ok(msg)) = reciever.next().await {
-            match msg {
-                Message::Text(txt) => tx.send(GameMessage::Text(txt)).await.unwrap(),
-                _ => {}
+        while let Some(rcv) = reciever.next().await {
+            match rcv {
+                Ok(msg) => match msg {
+                    Message::Text(txt) => {
+                        let _ = tx.send(GameMessage::Text(txt)).await;
+                    }
+                    _ => {}
+                },
+                Err(e) => log::error!("Something went wrong with socket : {e}"),
             }
         }
     });
@@ -137,9 +136,9 @@ async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<App
     while let Some(msg) = rx.recv().await {
         match msg {
             GameMessage::Text(txt) => {
-                let _ = sender.send(Message::from(txt)).await;
+                let _ = sender.send(Message::Text(txt)).await;
             }
             _ => {}
         }
-    }*/
+    }
 }
