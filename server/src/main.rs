@@ -116,6 +116,9 @@ async fn ws_handler(
 async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<AppState>>) {
     state.lock().await.join(socket).await;
 
+
+    
+
     /*if sender.send(Message::Ping(vec![1, 2, 3])).await.is_ok() {
         println!("Pinged {addr}");
     } else {
