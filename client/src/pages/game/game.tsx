@@ -8,10 +8,21 @@ enum Status {
   Connected,
 }
 
+enum Colour {
+  Black,
+  White,
+}
+
+interface Pieces {
+  colour: Colour;
+  position: [number, number];
+}
+
 export default function Game() {
   const [messages, setMessages] = useState<string[]>([]);
   const [webSock, setWebSock] = useState<WebSocket>();
   const [status, setStatus] = useState<Status>(Status.Disconnected);
+  const [pieces, setPieces] = useState<Pieces[]>([]);
 
   function handleButtonClick() {
     setStatus(Status.Connecting);

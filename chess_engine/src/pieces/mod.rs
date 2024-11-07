@@ -1,3 +1,3 @@
 mod piece;
 
-pub(crate) use piece::{Colour, Piece, PieceType};
+pub use piece::{Colour, Piece, PieceType};

@@ -2,8 +2,12 @@ mod board;
 mod game;
 mod pieces;
 
+pub use board::Board;
 pub use game::Game;
 pub use game::Move;
+pub use game::Position;
+pub use pieces::Colour;
+pub use pieces::PieceType;
 
 #[cfg(test)]
 mod tests {

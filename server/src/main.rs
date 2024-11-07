@@ -10,7 +10,7 @@ use axum_extra::headers::UserAgent;
 use axum_extra::TypedHeader;
 use futures::lock::Mutex;
 use futures::{SinkExt, StreamExt};
-use game::{Game, GameMessage};
+use game::{convert_game_to_json, Game, GameMessage};
 use log::info;
 use std::env;
 use std::net::SocketAddr;
@@ -72,7 +72,10 @@ impl AppState {
 
 #[tokio::main]
 async fn main() {
-    dotenv::dotenv().ok();
+    let game = chess_engine::Game::new();
+    let real = convert_game_to_json(game.board);
+    println!("{}", real);
+    /*dotenv::dotenv().ok();
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info")
     }
@@ -112,7 +115,7 @@ async fn main() {
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
     .await
-    .unwrap();
+    .unwrap();*/
 }
 
 async fn ws_handler(
@@ -128,10 +131,10 @@ async fn ws_handler(
     };
 
     info!("{user_agent} connected at {addr}");
-    ws.on_upgrade(move |socket| handle_socket(socket, state))
+    ws.on_upgrade(move |socket| handle_socket(socket, addr, state))
 }
 
-async fn handle_socket(socket: WebSocket, state: Arc<Mutex<AppState>>) {
+async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<AppState>>) {
     let (mut sender, mut reciever) = socket.split();
     let (tx, mut rx) = state.lock().await.join().await;
 
