@@ -1,4 +1,5 @@
 use crate::{player::Player, CHANNEL_BUFFER};
+use chess_engine::{Colour, PieceType, Position};
 use futures::lock::Mutex;
 use std::sync::Arc;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -12,7 +13,6 @@ pub enum GameMessage {
 
 pub struct Game {
     pub id: Uuid,
-    //pub game: chess_engine::Game,
     pub tx: Sender<GameMessage>,
     pub players: Arc<Mutex<Vec<Player>>>,
     pub full: Arc<Mutex<bool>>,
@@ -30,6 +30,7 @@ impl Game {
     pub fn start(&mut self, mut rx: Receiver<GameMessage>) {
         let full = Arc::clone(&self.full);
         tokio::spawn(async move {
+            let game = chess_engine::Game::new();
             let mut players = Vec::new();
             while let Some(msg) = rx.recv().await {
                 match msg {
@@ -50,4 +51,39 @@ impl Game {
             }
         });
     }
+}
+
+// p,R,Kn,B,Q,K
+// p11W;
+pub fn convert_game_to_json(board: chess_engine::Board) -> String {
+    let mut total = String::new();
+    for i in 0..8 {
+        for j in 0..8 {
+            match board.get(&Position::new(i, j)) {
+                None => continue,
+                Some(piece) => {
+                    let mut str = String::new();
+                    str += match piece.piece_type() {
+                        PieceType::Pawn => "p",
+                        PieceType::Rook => "r",
+                        PieceType::Knight => "kn",
+                        PieceType::Bishop => "b",
+                        PieceType::Queen => "q",
+                        PieceType::King => "k",
+                    };
+
+                    str += &i.to_string();
+                    str += &j.to_string();
+                    str += match piece.colour() {
+                        Colour::White => "w",
+                        Colour::Black => "b",
+                    };
+                    str += ";";
+
+                    total += &str;
+                }
+            }
+        }
+    }
+    total
 }
