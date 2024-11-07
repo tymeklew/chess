@@ -15,6 +15,7 @@ pub struct Game {
     //pub game: chess_engine::Game,
     pub tx: Sender<GameMessage>,
     pub players: Arc<Mutex<Vec<Player>>>,
+    pub full: Arc<Mutex<bool>>,
 }
 
 impl Game {
@@ -23,14 +24,20 @@ impl Game {
             id: Uuid::new_v4(),
             tx,
             players: Arc::new(Mutex::new(Vec::with_capacity(2))),
+            full: Arc::new(Mutex::new(false)),
         }
     }
     pub fn start(&mut self, mut rx: Receiver<GameMessage>) {
+        let full = Arc::clone(&self.full);
         tokio::spawn(async move {
             let mut players = Vec::new();
             while let Some(msg) = rx.recv().await {
                 match msg {
                     GameMessage::Join(tx) => {
+                        if players.len() >= 2 {
+                            *full.lock().await = true;
+                            continue;
+                        }
                         players.push(tx);
                     }
                     GameMessage::Text(txt) => {

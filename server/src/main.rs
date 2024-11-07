@@ -16,37 +16,54 @@ use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::mpsc::{self, channel, Receiver, Sender};
+use tower_http::cors::CorsLayer;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use uuid::Uuid;
 
 const CHANNEL_BUFFER: usize = 100;
 
 pub struct AppState {
     games: Vec<Game>,
-    game_count: usize,
 }
 
 impl AppState {
     pub fn new() -> Self {
         Self {
             games: Vec::with_capacity(10),
-            game_count: 0,
         }
     }
     // ->
-    pub fn new_game(&mut self) {
+    pub fn new_game(&mut self) -> Uuid {
         let (tx, rx) = mpsc::channel(100);
         let mut game = Game::new(tx);
+        let id = game.id.clone();
+
         game.start(rx);
         self.games.push(game);
+
+        id
     }
 
     pub async fn join(&mut self) -> (Sender<GameMessage>, Receiver<GameMessage>) {
-        if self.games.is_empty() {
-            self.new_game();
+        let mut available_games = Vec::new();
+        for game in &self.games {
+            if !*game.full.lock().await {
+                available_games.push(game.id);
+            }
         }
 
-        let game_sender = self.games.first().unwrap().tx.clone();
+        if available_games.is_empty() {
+            available_games.push(self.new_game());
+        }
+
+        let game = self
+            .games
+            .iter()
+            .find(|f| &f.id == available_games.first().unwrap())
+            .unwrap();
+
+        let game_sender = game.tx.clone();
         let (tx, rx) = channel::<GameMessage>(CHANNEL_BUFFER);
         let _ = game_sender.send(GameMessage::Join(tx)).await;
         (game_sender, rx)
@@ -75,7 +92,6 @@ async fn main() {
     };
 
     let state = Arc::new(Mutex::new(AppState::new()));
-    //let cors = CorsLayer::new();
 
     let app = Router::new()
         .route("/ws", any(ws_handler))
@@ -83,6 +99,7 @@ async fn main() {
             TraceLayer::new_for_http()
                 .make_span_with(DefaultMakeSpan::default().include_headers(true)),
         )
+        .layer(CorsLayer::permissive())
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port))
@@ -111,11 +128,10 @@ async fn ws_handler(
     };
 
     info!("{user_agent} connected at {addr}");
-
-    ws.on_upgrade(move |socket| handle_socket(socket, addr, state))
+    ws.on_upgrade(move |socket| handle_socket(socket, state))
 }
 
-async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<AppState>>) {
+async fn handle_socket(socket: WebSocket, state: Arc<Mutex<AppState>>) {
     let (mut sender, mut reciever) = socket.split();
     let (tx, mut rx) = state.lock().await.join().await;
 
@@ -124,6 +140,7 @@ async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<App
             match rcv {
                 Ok(msg) => match msg {
                     Message::Text(txt) => {
+                        info!("Recieved : {}", txt);
                         let _ = tx.send(GameMessage::Text(txt)).await;
                     }
                     _ => {}
@@ -136,6 +153,7 @@ async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<App
     while let Some(msg) = rx.recv().await {
         match msg {
             GameMessage::Text(txt) => {
+                info!("Sending message to client");
                 let _ = sender.send(Message::Text(txt)).await;
             }
             _ => {}
