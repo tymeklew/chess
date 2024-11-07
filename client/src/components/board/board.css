@@ -1,0 +1,38 @@
+.board {
+    width: 30vw;
+    height: 30vw;
+    background-color: red;
+    display: grid;
+    position: relative;
+    grid-template-columns: repeat(8, auto);
+    grid-template-rows: repeat(8, auto);
+}
+.tile {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+.tile-light {
+    background-color: #818ba1;
+}
+.tile-dark {
+    background-color: #bac1b8;
+}
+.numbering {
+    position: absolute;
+    padding: 0px;
+    margin: 0px;
+    color: #2b303a;
+    font-weight: 800;
+    font-size: 15px;
+}
+
+.upper-number {
+    right: 0px;
+    top: 0px;
+}
+
+.lower-letter {
+    left: 0px;
+    bottom: 0px;
+}
