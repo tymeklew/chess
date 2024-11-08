@@ -9,6 +9,8 @@ pub enum GameMessage {
     Text(String),
     Move(chess_engine::Move),
     Join(Sender<GameMessage>),
+    RequestGameState,
+    GameState(String),
 }
 
 pub struct Game {
@@ -40,10 +42,22 @@ impl Game {
                             continue;
                         }
                         players.push(tx);
+                        for p in &players {
+                            let _ = p
+                                .send(GameMessage::GameState(convert_game_to_json(game.board)))
+                                .await;
+                        }
                     }
                     GameMessage::Text(txt) => {
                         for p in &players {
                             let _ = p.send(GameMessage::Text(txt.clone())).await;
+                        }
+                    }
+                    GameMessage::RequestGameState => {
+                        for p in &players {
+                            let _ = p
+                                .send(GameMessage::GameState(convert_game_to_json(game.board)))
+                                .await;
                         }
                     }
                     _ => {}
