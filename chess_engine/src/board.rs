@@ -15,6 +15,10 @@ impl Board {
     pub fn get(&self, pos: &Position) -> Option<Piece> {
         self.0[pos.row as usize][pos.col as usize]
     }
+
+    pub fn full(&self) -> [[Option<Piece>; 8]; 8] {
+        self.0.clone()
+    }
     // A piece has moved
     pub fn moved(&mut self, pos: &Position) {
         if let Some(piece) = self.0[pos.row as usize][pos.col as usize].as_mut() {

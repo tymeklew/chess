@@ -33,7 +33,7 @@ export default function Game() {
     socket.onopen = () => {
       socket.send(
         JSON.stringify({
-          type: "game_State",
+          type: "game_state",
         }),
       );
       setStatus(Status.Connected);
@@ -53,15 +53,17 @@ export default function Game() {
           evt.data["data"] as string,
         ]);
         break;
-      case "game_State":
+      case "game_state":
         updateBoard(info["data"] as string);
         break;
     }
   }
 
   function updateBoard(data: string) {
+    if (data == undefined) return;
+    console.log(data);
     let pieces = [];
-    data.split(";").forEach((c) => (c) => {
+    data.split(";").forEach((c) => {
       console.log(c);
     });
   }
