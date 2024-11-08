@@ -10,7 +10,7 @@ use axum_extra::headers::UserAgent;
 use axum_extra::TypedHeader;
 use futures::lock::Mutex;
 use futures::{SinkExt, StreamExt};
-use game::{convert_game_to_json, Game, GameMessage};
+use game::{game_to_fen, Game, GameMessage};
 use log::info;
 use serde_json::{json, Value};
 use std::env;
@@ -55,7 +55,8 @@ impl AppState {
         }
 
         if available_games.is_empty() {
-            available_games.push(self.new_game());
+            let new_game = self.new_game();
+            available_games.push(new_game);
         }
 
         let game = self
@@ -74,9 +75,6 @@ impl AppState {
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().ok();
-    if env::var("RUST_LOG").is_err() {
-        env::set_var("RUST_LOG", "info")
-    }
 
     tracing_subscriber::registry()
         .with(
@@ -136,6 +134,7 @@ async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<App
     let (mut sender, mut reciever) = socket.split();
     let (tx, mut rx) = state.lock().await.join().await;
 
+    // TOkio select
     tokio::spawn(async move {
         while let Some(rcv) = reciever.next().await {
             match rcv {
@@ -176,7 +175,7 @@ async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<App
                     "data" : str
                 })
                 .to_string();
-                info!("Sending state : {}", send);
+                info!("Sending state : {} {str}", send);
                 let _ = sender.send(Message::Text(send)).await;
             }
             _ => {}

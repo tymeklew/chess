@@ -44,7 +44,7 @@ impl Game {
                         players.push(tx);
                         for p in &players {
                             let _ = p
-                                .send(GameMessage::GameState(convert_game_to_json(game.board)))
+                                .send(GameMessage::GameState(game_to_fen(game.board)))
                                 .await;
                         }
                     }
@@ -56,7 +56,7 @@ impl Game {
                     GameMessage::RequestGameState => {
                         for p in &players {
                             let _ = p
-                                .send(GameMessage::GameState(convert_game_to_json(game.board)))
+                                .send(GameMessage::GameState(game_to_fen(game.board)))
                                 .await;
                         }
                     }
@@ -69,35 +69,38 @@ impl Game {
 
 // p,R,Kn,B,Q,K
 // p11W;
-pub fn convert_game_to_json(board: chess_engine::Board) -> String {
-    let mut total = String::new();
-    for i in 0..8 {
-        for j in 0..8 {
-            match board.get(&Position::new(i, j)) {
-                None => continue,
+pub fn game_to_fen(board: chess_engine::Board) -> String {
+    let mut str = String::new();
+    let mut count = 0;
+    for row in board.full() {
+        if row.iter().all(|f| f.is_none()) {
+            str += "8/";
+            continue;
+        }
+
+        for item in row {
+            match item {
                 Some(piece) => {
-                    let mut str = String::new();
+                    if count != 0 {
+                        str += &count.to_string();
+                        count = 0;
+                    }
+
                     str += match piece.piece_type() {
                         PieceType::Pawn => "p",
+                        PieceType::Knight => "n",
                         PieceType::Rook => "r",
-                        PieceType::Knight => "kn",
                         PieceType::Bishop => "b",
                         PieceType::Queen => "q",
                         PieceType::King => "k",
-                    };
-
-                    str += &i.to_string();
-                    str += &j.to_string();
-                    str += match piece.colour() {
-                        Colour::White => "w",
-                        Colour::Black => "b",
-                    };
-                    str += ";";
-
-                    total += &str;
+                    }
                 }
+                None => count += 1,
             }
         }
+        str += "/";
+        count = 0;
     }
-    total
+
+    str
 }

@@ -2,6 +2,7 @@ import "./board.css";
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 export default function Board() {
+  //t Make text numbering and lettering inverted
   return (
     <div className="board">
       {Array.from({ length: 64 }).map((_, index) => {
