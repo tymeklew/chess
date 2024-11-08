@@ -1,6 +1,6 @@
 .board {
-    width: 30vw;
-    height: 30vw;
+    width: 50vw;
+    height: 100%;
     background-color: red;
     display: grid;
     position: relative;
@@ -28,11 +28,11 @@
 }
 
 .upper-number {
-    right: 0px;
-    top: 0px;
+    left: 2px;
+    top: 1px;
 }
 
 .lower-letter {
-    left: 0px;
-    bottom: 0px;
+    right: 2px;
+    bottom: -4px;
 }

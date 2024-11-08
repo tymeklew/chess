@@ -72,10 +72,7 @@ impl AppState {
 
 #[tokio::main]
 async fn main() {
-    let game = chess_engine::Game::new();
-    let real = convert_game_to_json(game.board);
-    println!("{}", real);
-    /*dotenv::dotenv().ok();
+    dotenv::dotenv().ok();
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info")
     }
@@ -115,7 +112,7 @@ async fn main() {
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
     .await
-    .unwrap();*/
+    .unwrap();
 }
 
 async fn ws_handler(
