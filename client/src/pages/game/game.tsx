@@ -30,23 +30,50 @@ export default function Game() {
     const socket = new WebSocket("ws://localhost:3000/ws");
     setWebSock(socket);
     // Connection opened
-    socket.onopen = () => setStatus(Status.Connected);
+    socket.onopen = () => {
+      socket.send(
+        JSON.stringify({
+          type: "game_State",
+        }),
+      );
+      setStatus(Status.Connected);
+    };
     socket.onclose = () => setStatus(Status.Disconnected);
 
     socket.onmessage = handleMessage;
   }
 
   function handleMessage(evt) {
-    console.log(evt.data as string);
-    setMessages((oldMessages) => [...oldMessages, evt.data as string]);
-    console.log(messages.length);
+    const info = JSON.parse(evt.data);
+    console.log(info);
+    switch (info["type"]) {
+      case "message":
+        setMessages((oldMessages) => [
+          ...oldMessages,
+          evt.data["data"] as string,
+        ]);
+        break;
+      case "game_State":
+        updateBoard(info["data"] as string);
+        break;
+    }
+  }
+
+  function updateBoard(data: string) {
+    let pieces = [];
+    data.split(";").forEach((c) => (c) => {
+      console.log(c);
+    });
   }
 
   function sendMessage(msg: string) {
-    console.log("b");
     if (webSock == undefined) return;
-    console.log("sending message");
-    webSock.send(msg);
+    webSock.send(
+      JSON.stringify({
+        type: "message",
+        data: msg,
+      }),
+    );
   }
 
   function getStatus(): ReactNode {

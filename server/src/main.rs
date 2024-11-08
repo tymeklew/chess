@@ -12,6 +12,7 @@ use futures::lock::Mutex;
 use futures::{SinkExt, StreamExt};
 use game::{convert_game_to_json, Game, GameMessage};
 use log::info;
+use serde_json::{json, Value};
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -140,7 +141,20 @@ async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<App
             match rcv {
                 Ok(msg) => match msg {
                     Message::Text(txt) => {
-                        info!("Recieved : {}", txt);
+                        let req: Value = serde_json::from_str(&txt).unwrap();
+                        match &req["type"] {
+                            Value::String(str) => match str.as_str() {
+                                "message" => {
+                                    let _ =
+                                        tx.send(GameMessage::Text(req["data"].to_string())).await;
+                                }
+                                "game_state" => {
+                                    let _ = tx.send(GameMessage::RequestGameState).await;
+                                }
+                                _ => {}
+                            },
+                            _ => {}
+                        }
                         let _ = tx.send(GameMessage::Text(txt)).await;
                     }
                     _ => {}
@@ -156,7 +170,31 @@ async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<App
                 info!("Sending message to client");
                 let _ = sender.send(Message::Text(txt)).await;
             }
+            GameMessage::GameState(str) => {
+                let send = json!({
+                    "type" : "game_state",
+                    "data" : str
+                })
+                .to_string();
+                info!("Sending state : {}", send);
+                let _ = sender.send(Message::Text(send)).await;
+            }
             _ => {}
         }
     }
 }
+
+/*
+- Websocket communication
+Sending a chat message
+{
+    type : "message",
+    data : "Message"
+}
+
+{
+    type : "game_state"
+}
+returns the game state
+
+*/
