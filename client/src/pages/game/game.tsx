@@ -1,5 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Board, ChatBox } from "../../components";
+import { GiCrossedPistols, GiFlyingFlag, GiChessKing } from "react-icons/gi";
 import "./game.css";
 
 enum Status {
@@ -61,12 +62,26 @@ export default function Game() {
 
   return (
     <div className="game-container">
-      <button onClick={handleButtonClick}> Play </button>
       <div className="board-container">
-        {getStatus()}
         <Board />
+        <div className="info-container">
+          {getStatus()}
+          <button onClick={handleButtonClick}>
+            {" "}
+            Play <GiChessKing />{" "}
+          </button>
+          <button>
+            {" "}
+            Draw <GiCrossedPistols />
+          </button>
+          <button>
+            {" "}
+            Resign <GiFlyingFlag />{" "}
+          </button>
+          <ChatBox messages={messages} sendMessage={sendMessage} />
+        </div>
       </div>
-      <ChatBox messages={messages} sendMessage={sendMessage} />
+      {/*<ChatBox messages={messages} sendMessage={sendMessage} />*/}
     </div>
   );
 }

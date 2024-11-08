@@ -10,10 +10,10 @@ export default function Board() {
             key={index}
             className={`tile tile-${(index + Math.floor(index / 8)) % 2 === 0 ? "light" : "dark"}`}
           >
-            {index % 8 == 7 ? (
+            {index % 8 == 0 ? (
               <p className="upper-number numbering">
                 {" "}
-                {Math.floor(9 - index / 8)}{" "}
+                {Math.floor(8 - index / 8)}{" "}
               </p>
             ) : (
               <> </>

@@ -4,10 +4,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-direction: column;
     gap: 2rem;
 }
-
+.board-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    box-sizing: border-box;
+    padding-top: 2px;
+    height: 100%;
+    gap: 0.8rem;
+}
+.info-container {
+    height: 100%;
+}
+.info-container button {
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
 .status {
     font-weight: 800;
 }
