@@ -1,5 +1,6 @@
 use crate::board::BitBoard;
 
+#[derive(Clone)]
 pub struct Square(pub u8, pub u8);
 impl Square {
     pub fn new(row: u8, file: u8) -> Self {
@@ -20,6 +21,17 @@ impl Pieces {
     pub const QUEEN: usize = 4;
     pub const KING: usize = 5;
     pub const EMPTY: usize = 6;
+
+    pub fn all() -> Vec<usize> {
+        vec![
+            Self::PAWN,
+            Self::ROOK,
+            Self::KNIGHT,
+            Self::BISHOP,
+            Self::QUEEN,
+            Self::KING,
+        ]
+    }
 }
 
 pub struct Sides {}
@@ -68,16 +80,65 @@ impl Game {
         }
     }
 
+    pub fn empty(&self) -> u64 {
+        !self.sides[Sides::WHITE].0 & !self.sides[Sides::BLACK].0
+    }
+
+    pub fn enemy(&self, side: usize) -> u64 {
+        self.sides[match side {
+            Sides::WHITE => Sides::BLACK,
+            _ => Sides::WHITE,
+        }]
+        .0
+    }
+
+    pub fn find_piece(&self, side: usize, sqr: BitBoard) -> usize {
+        for piece in Pieces::all() {
+            if (sqr.0 & self.pieces[side][piece].0) > 0 {
+                return piece;
+            }
+        }
+        return Pieces::EMPTY;
+    }
+
     pub fn legal_moves(&mut self, start: Square) {
-        let initial = BitBoard::from_square(start);
+        let init = BitBoard::from_square(start.clone());
+        for side in [Sides::WHITE, Sides::BLACK] {
+            if init.0 & self.sides[side].0 > 0 {
+                let piece = self.find_piece(side, init);
 
-        let mut moves = BitBoard(0);
-        moves.0 ^= !self.sides[Sides::BLACK].0 & (initial.0 << ROW);
-        moves.0 ^= !self.sides[Sides::BLACK].0 & (initial.0 << (ROW * 2));
+                match piece {
+                    Pieces::PAWN => {
+                        let x = self.legal_pawn_moves(start, side);
+                        println!("{}", x);
+                    }
+                    _ => {}
+                }
+                break;
+            }
+        }
+    }
 
-        moves.0 ^= self.sides[Sides::BLACK].0 & (initial.0 << (ROW - 1));
-        moves.0 ^= self.sides[Sides::BLACK].0 & (initial.0 << (ROW + 1));
+    pub fn legal_pawn_moves(&self, start: Square, side: usize) -> BitBoard {
+        let init = BitBoard::from_square(start);
+        let mut board = BitBoard(0);
 
-        println!("{}", moves);
+        // Moving one ahead
+        board.0 ^= self.empty() & (init.0 << ROW);
+        // Moving 2 ahead if on starting row
+        board.0 ^= self.empty() & (init.0 << (ROW * 2)) & (self.empty() & (init.0 << ROW)) << ROW;
+        // Taking enemy on the right
+        board.0 ^= self.enemy(side) & (init.0 << (ROW + 1));
+        // Taking enemy on the left
+        board.0 ^= self.enemy(side) & (init.0 << (ROW - 1));
+
+        board
+    }
+
+    pub fn legal_rook_moves(&self, start: Square, side: usize) -> BitBoard {
+        let init = BitBoard::from_square(start);
+        let mut board = BitBoard(0);
+
+        board ^= self.empty() & board
     }
 }
