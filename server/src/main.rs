@@ -16,13 +16,12 @@ use serde_json::{json, Value};
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::sync::mpsc::{self, channel, Receiver, Sender};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tower_http::cors::CorsLayer;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use uuid::Uuid;
 
-const CHANNEL_BUFFER: usize = 100;
+const CHANNEL_BUFFER_SIZE: usize = 100;
 
 pub struct AppState {
     games: Vec<Game>,
@@ -34,42 +33,15 @@ impl AppState {
             games: Vec::with_capacity(10),
         }
     }
-    // ->
-    pub fn new_game(&mut self) -> Uuid {
-        let (tx, rx) = mpsc::channel(100);
-        let mut game = Game::new(tx);
-        let id = game.id.clone();
-
+    pub fn new_game(&mut self) {
+        let (tx, rx) = channel(CHANNEL_BUFFER_SIZE);
+        let game = Game::new(tx);
         game.start(rx);
+
         self.games.push(game);
-
-        id
     }
 
-    pub async fn join(&mut self) -> (Sender<GameMessage>, Receiver<GameMessage>) {
-        let mut available_games = Vec::new();
-        for game in &self.games {
-            if !*game.full.lock().await {
-                available_games.push(game.id);
-            }
-        }
-
-        if available_games.is_empty() {
-            let new_game = self.new_game();
-            available_games.push(new_game);
-        }
-
-        let game = self
-            .games
-            .iter()
-            .find(|f| &f.id == available_games.first().unwrap())
-            .unwrap();
-
-        let game_sender = game.tx.clone();
-        let (tx, rx) = channel::<GameMessage>(CHANNEL_BUFFER);
-        let _ = game_sender.send(GameMessage::Join(tx)).await;
-        (game_sender, rx)
-    }
+    pub fn join(&mut self) {}
 }
 
 #[tokio::main]
@@ -130,58 +102,7 @@ async fn ws_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, addr, state))
 }
 
-async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<AppState>>) {
-    let (mut sender, mut reciever) = socket.split();
-    let (tx, mut rx) = state.lock().await.join().await;
-
-    // TOkio select
-    tokio::spawn(async move {
-        while let Some(rcv) = reciever.next().await {
-            match rcv {
-                Ok(msg) => match msg {
-                    Message::Text(txt) => {
-                        let req: Value = serde_json::from_str(&txt).unwrap();
-                        match &req["type"] {
-                            Value::String(str) => match str.as_str() {
-                                "message" => {
-                                    let _ =
-                                        tx.send(GameMessage::Text(req["data"].to_string())).await;
-                                }
-                                "game_state" => {
-                                    let _ = tx.send(GameMessage::RequestGameState).await;
-                                }
-                                _ => {}
-                            },
-                            _ => {}
-                        }
-                        let _ = tx.send(GameMessage::Text(txt)).await;
-                    }
-                    _ => {}
-                },
-                Err(e) => log::error!("Something went wrong with socket : {e}"),
-            }
-        }
-    });
-
-    while let Some(msg) = rx.recv().await {
-        match msg {
-            GameMessage::Text(txt) => {
-                info!("Sending message to client");
-                let _ = sender.send(Message::Text(txt)).await;
-            }
-            GameMessage::GameState(str) => {
-                let send = json!({
-                    "type" : "game_state",
-                    "data" : str
-                })
-                .to_string();
-                info!("Sending state : {} {str}", send);
-                let _ = sender.send(Message::Text(send)).await;
-            }
-            _ => {}
-        }
-    }
-}
+async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<AppState>>) {}
 
 /*
 - Websocket communication
