@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod board;
 mod game;
 
@@ -6,13 +8,13 @@ mod tests {
         board::BitBoard,
         game::{Game, Pieces, Sides, Square},
     };
+    use std::fmt::Display;
 
     #[test]
     fn it_works() {
-        let x: u64 = 2;
         let mut game = Game::new();
         game.init();
 
-        game.legal_moves(Square::new(1, 1));
+        let x = game.legal_moves(Square::new(1, 1));
     }
 }
