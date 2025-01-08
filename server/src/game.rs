@@ -1,67 +1,80 @@
-use axum::extract::ws::WebSocket;
-use chess_engine::PieceType;
-use tokio::sync::mpsc::{Receiver, Sender};
+use std::io::Error;
+use tokio::task::JoinHandle;
+use log::info;
+use axum::extract::ws::{Message, WebSocket};
+use crate::player::Player;
+use crate::Result;
+use serde::{Serialize , Deserialize};
 
-pub enum GameMessage {
-    Join(WebSocket),
+
+#[derive(Serialize , Deserialize)]
+struct GameEvent {
+    #[serde(rename = "type")]
+    msg_type : String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    data : Option<String>
 }
 
 pub struct Game {
-    tx: Sender<GameMessage>,
-    players: [Option<WebSocket>; 2],
 }
 
 impl Game {
-    pub fn new(tx: Sender<GameMessage>) -> Self {
-        Game {
-            tx,
-            players: [None, None],
-        }
-    }
-    pub fn start(&self, mut rx: Receiver<GameMessage>) {
-        let (socket1, socket2) = (self.players[0], self.players[1]);
+    pub fn start(mut self , mut p1 : Player ,mut p2 : Player) -> JoinHandle<()> {
         tokio::spawn(async move {
-            tokio::select! {
-                msg = rx.recv() => {}
-            };
-        });
-    }
-}
-
-// p,R,Kn,B,Q,K
-// p11W;
-pub fn game_to_fen(board: chess_engine::Board) -> String {
-    let mut str = String::new();
-    let mut count = 0;
-    for row in board.full() {
-        if row.iter().all(|f| f.is_none()) {
-            str += "8/";
-            continue;
-        }
-
-        for item in row {
-            match item {
-                Some(piece) => {
-                    if count != 0 {
-                        str += &count.to_string();
-                        count = 0;
+            loop {
+                tokio::select! {
+                    val = p1.sock().recv() => {
+                        if let Some(Ok(Message::Text(txt))) = val {
+                            self.handle_message(txt , &mut p2);
+                        }
                     }
-
-                    str += match piece.piece_type() {
-                        PieceType::Pawn => "p",
-                        PieceType::Knight => "n",
-                        PieceType::Rook => "r",
-                        PieceType::Bishop => "b",
-                        PieceType::Queen => "q",
-                        PieceType::King => "k",
+                    val = p2.sock().recv() => {
+                        if let Some(Ok(Message::Text(txt))) = val {
+                            broadcast_message(&mut p1, txt).await;
+                        }
                     }
                 }
-                None => count += 1,
-            }
-        }
-        str += "/";
-        count = 0;
-    }
-
-    str
+            }   
+        })
+    } 
+    async fn handle_message(&mut self , msg :String , to : &mut Player) -> Result<()> {
+        let evt : GameEvent = serde_json::from_str(&msg)?;
+        match evt.msg_type.as_str() {
+            "CHAT" => broadcast_message(to, evt.data.unwrap_or(String::new())).await?,
+            "MOVE" => (),
+            "RESIGN" => (),
+            "DRAW" => (),
+            _ => {},
+        };
+        Ok(())
 }
+
+
+}
+
+async fn broadcast_message(to : &mut Player , msg : String) -> Result<()> {
+    Ok(to.sock().send(Message::Text(msg)).await?)
+} 
+
+
+const Chat : usize = 0;
+/* JSON communication
+Chat message
+{
+    "type" : "CHAT",
+    "data" : "Hello World"
+}
+Move 
+{
+    "type" : "MOVE",
+    "data" : "Be5"
+}
+Resign
+{
+    "type" : "RESIGN"
+}
+Draw {
+    "type" : "DRAW_OFFER/DRAW_ACCEPT/DRAW_DECLINE"
+}
+ */
+
