@@ -10,9 +10,14 @@ use axum_extra::headers::UserAgent;
 use axum_extra::TypedHeader;
 use futures::lock::Mutex;
 use futures::{SinkExt, StreamExt};
-use game::{game_to_fen, Game, GameMessage};
+use game::Game;
 use log::info;
+use player::Player;
 use serde_json::{json, Value};
+use tokio::task::JoinHandle;
+use uuid::Uuid;
+use std::borrow::BorrowMut;
+use std::collections::HashMap;
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -22,26 +27,40 @@ use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 const CHANNEL_BUFFER_SIZE: usize = 100;
+pub type Result<T> = std::result::Result<T , Box<dyn std::error::Error>>;
 
 pub struct AppState {
-    games: Vec<Game>,
+    lobby : HashMap<Uuid , Player>,
+    games : Vec<JoinHandle<()>>
 }
 
 impl AppState {
-    pub fn new() -> Self {
-        Self {
-            games: Vec::with_capacity(10),
+    pub fn join(&mut self , sock : WebSocket) {
+        let player = Player::new(sock);
+        let id = player.id();
+
+        self.lobby.insert(id, player);
+        self.compatible(id);
+    }
+
+    // Find compatible opponent for the last player that joined
+    pub fn compatible(&mut self , id : Uuid) {
+        for player in &mut self.lobby.values() {
+            if player.id() != id {
+                info!("Found match");
+                let  p1 = self.lobby.remove(&player.id()).unwrap();
+                let p2 = self.lobby.remove(&id);
+
+                self.start(p1 , p2.unwrap());
+                break;
+            }
         }
     }
-    pub fn new_game(&mut self) {
-        let (tx, rx) = channel(CHANNEL_BUFFER_SIZE);
-        let game = Game::new(tx);
-        game.start(rx);
 
-        self.games.push(game);
+    // Start a new game with the players from that index
+    pub fn start(&mut self , p1 : Player  , p2 : Player) {
+        Game::start(p1, p2);
     }
-
-    pub fn join(&mut self) {}
 }
 
 #[tokio::main]
@@ -62,7 +81,11 @@ async fn main() {
         Err(_) => "8080".to_string(),
     };
 
-    let state = Arc::new(Mutex::new(AppState::new()));
+    //TODO New game implementation
+    let state = Arc::new(Mutex::new(AppState {
+        lobby : HashMap::new(),
+        games : Vec::new(),
+    }));
 
     let app = Router::new()
         .route("/ws", any(ws_handler))
@@ -72,6 +95,8 @@ async fn main() {
         )
         .layer(CorsLayer::permissive())
         .with_state(state);
+
+
 
     let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port))
         .await
@@ -102,19 +127,13 @@ async fn ws_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, addr, state))
 }
 
-async fn handle_socket(socket: WebSocket, addr: SocketAddr, state: Arc<Mutex<AppState>>) {}
-
-/*
-- Websocket communication
-Sending a chat message
-{
-    type : "message",
-    data : "Message"
+async fn handle_socket(mut sock: WebSocket, addr: SocketAddr, state: Arc<Mutex<AppState>>) {
+    if sock.send(Message::Ping(vec![1, 2, 3])).await.is_ok() {
+    } else {
+        println!("Could not send ping {addr}!");
+        // no Error here since the only thing we can do is to close the connection.
+        // If we can not send messages, there is no way to salvage the statemachine anyway.
+        return;
+    }
+    state.lock().await.join(sock);
 }
-
-{
-    type : "game_state"
-}
-returns the game state
-
-*/
