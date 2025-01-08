@@ -14,28 +14,28 @@ use game::Game;
 use log::info;
 use player::Player;
 use serde_json::{json, Value};
-use tokio::task::JoinHandle;
-use uuid::Uuid;
 use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::task::JoinHandle;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use uuid::Uuid;
 
 const CHANNEL_BUFFER_SIZE: usize = 100;
-pub type Result<T> = std::result::Result<T , Box<dyn std::error::Error>>;
+pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub struct AppState {
-    lobby : HashMap<Uuid , Player>,
-    games : Vec<JoinHandle<()>>
+    lobby: HashMap<Uuid, Player>,
+    games: Vec<JoinHandle<()>>,
 }
 
 impl AppState {
-    pub fn join(&mut self , sock : WebSocket) {
+    pub fn join(&mut self, sock: WebSocket) {
         let player = Player::new(sock);
         let id = player.id();
 
@@ -44,22 +44,22 @@ impl AppState {
     }
 
     // Find compatible opponent for the last player that joined
-    pub fn compatible(&mut self , id : Uuid) {
+    pub fn compatible(&mut self, id: Uuid) {
         for player in &mut self.lobby.values() {
             if player.id() != id {
                 info!("Found match");
-                let  p1 = self.lobby.remove(&player.id()).unwrap();
+                let p1 = self.lobby.remove(&player.id()).unwrap();
                 let p2 = self.lobby.remove(&id);
 
-                self.start(p1 , p2.unwrap());
+                self.start(p1, p2.unwrap());
                 break;
             }
         }
     }
 
     // Start a new game with the players from that index
-    pub fn start(&mut self , p1 : Player  , p2 : Player) {
-        Game::start(p1, p2);
+    pub fn start(&mut self, p1: Player, p2: Player) {
+        Game::new().start(p1, p2);
     }
 }
 
@@ -83,8 +83,8 @@ async fn main() {
 
     //TODO New game implementation
     let state = Arc::new(Mutex::new(AppState {
-        lobby : HashMap::new(),
-        games : Vec::new(),
+        lobby: HashMap::new(),
+        games: Vec::new(),
     }));
 
     let app = Router::new()
@@ -95,8 +95,6 @@ async fn main() {
         )
         .layer(CorsLayer::permissive())
         .with_state(state);
-
-
 
     let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port))
         .await
