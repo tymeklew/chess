@@ -7,6 +7,12 @@ use std::io::Error;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
+pub enum GameStatus {
+    Ongoing,
+    Draw,
+    Winner(Uuid) 
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct GameEvent {
     #[serde(rename = "type")]
@@ -19,6 +25,7 @@ pub struct Game {
     draw_offered: Option<Uuid>,
     //Chat message to be sent id is the player who sent it
     chat: Option<(Uuid, String)>,
+    status : GameStatus, 
 }
 
 pub type AxumMessageResult = Option<std::result::Result<Message, axum::Error>>;
@@ -27,27 +34,32 @@ impl Game {
         Self {
             draw_offered: None,
             chat: None,
+            status : GameStatus::Ongoing,
         }
     }
 
     pub fn start(mut self, mut p1: Player, mut p2: Player) -> JoinHandle<()> {
         tokio::spawn(async move {
+            let mut players = [p1 , p2];
+
             loop {
-                if let Some((id, txt)) = self.chat {
-                    match id {
-                        _ if id == p1.id() => broadcast_message(&mut p2, txt).await.unwrap(),
-                        _ if id == p2.id() => broadcast_message(&mut p1, txt).await.unwrap(),
-                        _ => {}
-                    }
+                if let Some((id, txt)) = &self.chat {
+                    self.broadcast_message(*id , txt.clone()).await.unwrap();
                     self.chat = None;
                 }
 
+                // Little fix for the tokio::select! macro
+                let fix = players.split_at_mut(1);
                 tokio::select! {
-                    val = p1.sock().recv() => self.handle_message(val , p1.id()).await.unwrap(),
-                    val = p2.sock().recv() => self.handle_message(val , p2.id()).await.unwrap(),
+                    val = fix.0[0].sock().recv() => self.handle_message(val , players[1].id()).await.unwrap(),
+                    val = fix.1[1].sock().recv() => self.handle_message(val , players[2].id()).await.unwrap(),
                 };
             }
         })
+    }
+
+    async fn broadcast_message(&mut self ,to : Uuid, msg: String) -> Result<()> {
+        Ok(())
     }
 
     async fn handle_message(&mut self, msg: AxumMessageResult, id: Uuid) -> Result<()> {
@@ -62,9 +74,9 @@ impl Game {
                     "CHAT" => self.chat = Some((id, txt)),
                     "MOVE" => {}
                     "RESIGN" => {}
-                    "DRAW_OFFER" => {}
-                    "DRAW_DECLINE" => {}
-                    "DRAW_ACCEPT" => {}
+                    "DRAW_OFFER" => self.draw_offered = Some(id),
+                    "DRAW_DECLINE" => self.draw_offered = None,
+                    "DRAW_ACCEPT" => self.status = GameStatus::Draw,
                     _ => {}
                 }
             }
@@ -74,9 +86,7 @@ impl Game {
     }
 }
 
-async fn broadcast_message(to: &mut Player, msg: String) -> Result<()> {
-    Ok(to.sock().send(Message::Text(msg)).await?)
-}
+
 
 const Chat: usize = 0;
 /* JSON communication
