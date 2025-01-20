@@ -1,6 +1,4 @@
-use std::iter::empty;
-
-use crate::board::BitBoard;
+use crate::{board::BitBoard, state::State};
 
 pub enum LegalMove {
     Move,
@@ -13,12 +11,21 @@ pub enum LegalMove {
 #[derive(Clone, Copy)]
 pub struct Square(pub u8, pub u8);
 impl Square {
-    pub fn new(row: u8, file: u8) -> Self {
-        Self(row, file)
+    pub fn new(file: u8, rank: u8) -> Self {
+        Self(file, rank)
+    }
+}
+
+impl std::ops::Add for Square {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0 , self.1 + rhs.1)
     }
 }
 
 pub const FULL_ROW: u64 = 2_u64.pow(8) - 1;
+pub const FULL_COL : u64 = 0x0101010101010101; 
 pub const ROW: u64 = 8;
 pub const COL: u64 = 8;
 
@@ -54,8 +61,10 @@ const NUM_PIECES: usize = 8;
 const NUM_SIDES: usize = 2;
 
 pub struct Game {
+    pub turn : usize,
     pub pieces: [[BitBoard; NUM_PIECES]; NUM_SIDES],
     pub sides: [BitBoard; NUM_SIDES],
+    state : State,
 }
 
 impl Game {
@@ -63,6 +72,8 @@ impl Game {
         Self {
             pieces: [[BitBoard(0); NUM_PIECES]; NUM_SIDES],
             sides: [BitBoard(0); NUM_SIDES],
+            state : State::new(),
+            turn : 0,
         }
     }
 
@@ -90,90 +101,94 @@ impl Game {
         }
     }
 
-    /// Returns bitboard with 1's in empty squares
-    pub fn empty(&self) -> BitBoard {
-        BitBoard(!self.sides[Sides::WHITE].0 & !self.sides[Sides::BLACK].0)
+    fn find_piece_type(&self,  sqr : Square) -> Option<usize> {
+        let bb = BitBoard::from_square(sqr);
+
+        if (bb.0 & (self.sides[Sides::WHITE].0 | self.sides[Sides::BLACK].0)) == 0 {
+            return None;
+        }
+
+        Pieces::all().iter().position(|&piece| { 
+            (bb.0 & (self.pieces[Sides::WHITE][piece] | self.pieces[Sides::BLACK][piece]).0) > 0
+         })
     }
 
-    /// Returns bitboard with 1's in place of enemy pieces
-    ///* `side` - The players side
-    pub fn enemy(&self, side: usize) -> BitBoard {
-        BitBoard(
-            self.sides[match side {
-                Sides::WHITE => Sides::BLACK,
-                _ => Sides::WHITE,
-            }]
-            .0,
-        )
+    fn find_side(&self , sqr : Square) -> Option<usize> {
+        let bb = BitBoard::from_square(sqr);
+
+        for i in [Sides::WHITE , Sides::BLACK] {
+            if (self.sides[i].0 & bb.0) > 0 {
+                return Some(i);
+            }
+        }
+    
+        None        
     }
 
-    /// Find what type of piece is in a certain square
-    /// * `sqr` - Square you are trying to find what piece is on
-    pub fn find_piece(&self, sqr: Square) -> usize {
-        let side = self.find_side(sqr);
+    pub fn legal_moves(&self,  sqr : Square) -> Option<()> {
+        let piece_type = self.find_piece_type(sqr)?;
+        let side = self.find_side(sqr)?;
 
-        for piece in [
-            Pieces::PAWN,
-            Pieces::ROOK,
-            Pieces::BISHOP,
-            Pieces::KNIGHT,
-            Pieces::QUEEN,
-            Pieces::KING,
-        ] {
-            if (self.pieces[side][piece] & BitBoard::from_square(sqr)).0 > 0 {
-                return piece;
+        match piece_type {
+            Pieces::ROOK => self.legal_rook_moves(Square::new(5,5) , side),
+            _ => {},
+        }
+
+        Some(())
+    }
+
+    // Generate a bitboard with all friendly pieces
+    fn friendly(&self , side : usize) -> BitBoard{
+        let mut bb = BitBoard(0);
+
+        for i in Pieces::all() {
+            bb |= self.pieces[side][i];
+        } 
+
+        bb
+    } 
+
+    // Generate a bitboard with the enemy pieces
+    fn enemy(&self , side : usize) -> BitBoard {
+        let mut bb = BitBoard(0);
+        let opposing = if side == Sides::WHITE { Sides::BLACK } else { Sides::WHITE};
+
+        for i in Pieces::all() {
+            bb |= self.pieces[opposing][i];
+        } 
+
+        bb
+    }
+
+    pub fn legal_rook_moves(&self , sqr : Square , side : usize) {
+        let mut bb = BitBoard(0);
+        let occupied = self.friendly(side) | self.enemy(side);
+
+        bb.0 |= FULL_ROW << (2_u32.pow(sqr.0 as u32));
+        bb.0 |= FULL_COL << sqr.1;
+
+        // Directions rook can travel alternate 
+        let directions : [(i8 , i8) ; 4] = [
+            (1 , 0),
+            (0 ,1 ),
+            (-1 , 0),
+            (0 , -1)
+        ];
+
+        for (dx , dy) in directions {
+            let x = sqr.0;
+            let y = sqr.1;
+
+            loop {
+
+                
             }
         }
 
-        return Pieces::EMPTY;
-    }
 
-    /// Find what side the piece on the square is
-    /// * `sqr` - Square you are trying to find what side it is on
-    pub fn find_side(&self, sqr: Square) -> usize {
-        let board = BitBoard::from_square(sqr);
-        for side in [Sides::WHITE, Sides::BLACK] {
-            if (board & self.sides[side]).0 > 0 {
-                return side;
-            }
-        }
-        return Sides::WHITE;
-    }
 
-    /// Generate legal moves given a square
-    /// * `sqr` - Square from which to generate the legal moves
-    pub fn legal_moves(&mut self, sqr: Square) -> Vec<LegalMove> {
-        let side = self.find_side(sqr);
-        let piece = self.find_piece(sqr);
 
-        match piece {
-            Pieces::PAWN => self.legal_pawn_moves(sqr, side),
-            Pieces::ROOK => self.legal_rook_moves(sqr, side),
-            _ => todo!(),
-        }
-    }
 
-    /// Generate legal moves for a pawn given it's square and side
-    ///* `sqr` - The square on which the pawn is
-    ///* `side` - What side the pawn is on
-    pub fn legal_pawn_moves(&self, sqr: Square, side: usize) -> Vec<LegalMove> {
-        let init = BitBoard::from_square(sqr);
-        let positive = if side == Sides::WHITE { true } else { false };
-        let mvs = vec![];
-
-        // Single move up
-        if (self.empty() & init.shift(ROW, positive)).0 > 0 {}
-        // Add move to LegalMoves
-
-        let capture_mask: BitBoard = init.shift(ROW + 1, positive) ^ init.shift(ROW - 1, positive);
-
-        mvs
-    }
-
-    /// Generate legal moves for a rook given it's square and side
-    ///* `sqr` - The square on which the rook is
-    ///* `side` - What side the rook is on
-    pub fn legal_rook_moves(&self, sqr: Square, side: usize) -> Vec<LegalMove> {
-        vec![]
+        println!("{}" , bb);
     }
 }
