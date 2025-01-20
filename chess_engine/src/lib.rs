@@ -2,6 +2,7 @@
 
 mod board;
 mod game;
+mod state;
 
 mod tests {
     use crate::{
@@ -15,6 +16,6 @@ mod tests {
         let mut game = Game::new();
         game.init();
 
-        let x = game.legal_moves(Square::new(1, 1));
+        let x = game.legal_moves(Square::new(0, 0));
     }
 }
