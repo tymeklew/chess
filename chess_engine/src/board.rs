@@ -4,6 +4,7 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, N
 
 #[derive(Copy, Clone)]
 pub struct BitBoard(pub u64);
+
 impl BitBoard {
     ///* `shift` - How much to shift by
     ///* `positive` - Direction of shift positive for left shift and negative for right shift
