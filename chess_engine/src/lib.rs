@@ -16,6 +16,6 @@ mod tests {
         let mut game = Game::new();
         game.init();
 
-        let x = game.legal_moves(Square::new(0, 1));
+        let x = game.legal_moves(Square::new(1, 0));
     }
 }

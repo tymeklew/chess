@@ -20,6 +20,21 @@ impl BitBoard {
         num ^= 1_u64 << sqr.1 * 8 + sqr.0;
         BitBoard(num)
     }
+
+    ///  parallel prefix-algorithm
+    ///  Mirror a bitboard horizontaly around the center
+    pub fn mirror_h(&self) -> BitBoard {
+        let mut bb = self.clone();
+        const k1: u64 = 0x5555555555555555;
+        const k2: u64 = 0x3333333333333333;
+        const k4: u64 = 0x0f0f0f0f0f0f0f0f;
+
+        bb.0 = ((bb.0 >> 1) & k1) | ((bb.0 & k1) << 1);
+        bb.0 = ((bb.0 >> 2) & k2) | ((bb.0 & k2) << 2);
+        bb.0 = ((bb.0 >> 4) & k4) | ((bb.0 & k4) << 4);
+
+        bb
+    }
 }
 
 impl Display for BitBoard {
@@ -95,11 +110,3 @@ impl Shr<u64> for BitBoard {
         BitBoard(self.0 >> rhs)
     }
 }
-
-/*let board = 268_435_456;
-for rank in 0..8 {
-    for file in (0..8).rev() {
-        let mask = 1u64 << (63 - (rank * 8) - file);
-    }
-}
-*/
