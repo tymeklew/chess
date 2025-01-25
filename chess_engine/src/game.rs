@@ -1,11 +1,13 @@
+use core::panic;
+
 use crate::{board::BitBoard, state::State};
 
 pub enum LegalMove {
     Move,
     Attack,
-    Promotion,
+    Promotion, // engine should always promote to knight TODO
     Castle,
-    EnPassant,
+    EnPassant, // not real move
 }
 
 #[derive(Clone, Copy)]
@@ -130,9 +132,10 @@ impl Game {
         let side = self.find_side(sqr)?;
 
         match piece_type {
-            Pieces::ROOK => self.legal_rook_moves(Square::new(5,5) , side),
-            _ => {},
-        }
+            Pieces::ROOK => self.legal_rook_moves(sqr , side),
+            Pieces::PAWN => self.legal_pawn_moves(Square::new(2 , 5), side),
+            _ => todo!(),
+        };
 
         Some(())
     }
@@ -160,12 +163,54 @@ impl Game {
         bb
     }
 
-    pub fn legal_rook_moves(&self , sqr : Square , side : usize) {
+    pub fn legal_pawn_moves(&self , sqr : Square , side : usize) -> BitBoard {
         let mut bb = BitBoard(0);
+        let direction = if side == Sides::WHITE { 1 } else { -1 };
         let occupied = self.friendly(side) | self.enemy(side);
 
-        bb.0 |= FULL_ROW << (2_u32.pow(sqr.0 as u32));
-        bb.0 |= FULL_COL << sqr.1;
+        // Check initial double movement 
+        let moved = match side {
+            Sides::WHITE => sqr.1 != 1,
+            Sides::BLACK => sqr.1 != 6,
+            _ => panic!("Side that doesnt exist"),
+        };
+
+        let single = BitBoard::from_square(Square::new(sqr.0 , sqr.1 + 1));
+        let double = BitBoard::from_square(Square::new(sqr.0 , sqr.1 + 2));
+
+        // Standard Movement
+        if !moved && ((single | double) & occupied).0 == 0 {
+           bb |= single | double; 
+        }else if (single & occupied).0 == 0 {
+           bb |= single;
+        } 
+
+        let y = match sqr.1.checked_add_signed(1) {
+            Some(n) if n <= 7 => n,
+            _ => panic!("Not bad"),
+        };
+
+        // Attacking
+        for i in [1 , -1 ] {
+            let x = match sqr.0.checked_add_signed(i) {
+                Some(n) if n <= 7 => n,
+                _ => continue,
+            };
+
+            let mask = BitBoard::from_square(Square::new(x , y));
+
+            bb |= mask & self.enemy(side);
+        }
+        
+
+        println!("{}" , bb);
+
+        bb
+    }
+
+    pub fn legal_rook_moves(&self , sqr : Square , side : usize) -> BitBoard {
+        let mut bb = BitBoard(0);
+        let occupied = self.friendly(side) | self.enemy(side);
 
         // Directions rook can travel alternate 
         let directions : [(i8 , i8) ; 4] = [
@@ -176,19 +221,30 @@ impl Game {
         ];
 
         for (dx , dy) in directions {
-            let x = sqr.0;
-            let y = sqr.1;
+            let mut x = sqr.0;
+            let mut y = sqr.1;
 
             loop {
+                x = match x.checked_add_signed(dx) {
+                    Some(n) if n <= 7 => n,
+                    _ => break,
+                };
 
-                
+                y = match y.checked_add_signed(dy) {
+                    Some(n) if n <= 7 => n,
+                    _ => break,
+                };
+
+                let mv = BitBoard::from_square(Square::new(x , y));
+                if (mv & self.enemy(side)).0 > 0 {
+                    bb |= mv;
+                    break;
+                }else if (mv & occupied).0 > 0 {
+                    break;
+                }
+                bb |= mv;
             }
         }
-
-
-
-
-
-        println!("{}" , bb);
+        bb
     }
 }
