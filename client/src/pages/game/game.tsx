@@ -31,11 +31,6 @@ export default function Game() {
     setWebSock(socket);
     // Connection opened
     socket.onopen = () => {
-      socket.send(
-        JSON.stringify({
-          type: "game_state",
-        }),
-      );
       setStatus(Status.Connected);
     };
     socket.onclose = () => setStatus(Status.Disconnected);
@@ -44,38 +39,19 @@ export default function Game() {
   }
 
   function handleMessage(evt) {
-    const info = JSON.parse(evt.data);
-    console.log(info);
-    switch (info["type"]) {
-      case "message":
-        setMessages((oldMessages) => [
-          ...oldMessages,
-          evt.data["data"] as string,
-        ]);
-        break;
-      case "game_state":
-        updateBoard(info["data"] as string);
+    switch (evt.type) {
+      case "CHAT":
+        setMessages([...messages , evt.data]);
         break;
     }
   }
 
   function updateBoard(data: string) {
-    if (data == undefined) return;
-    console.log(data);
-    let pieces = [];
-    data.split(";").forEach((c) => {
-      console.log(c);
-    });
+
   }
 
   function sendMessage(msg: string) {
-    if (webSock == undefined) return;
-    webSock.send(
-      JSON.stringify({
-        type: "message",
-        data: msg,
-      }),
-    );
+    webSock?.send(msg); 
   }
 
   function getStatus(): ReactNode {
