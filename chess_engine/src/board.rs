@@ -21,6 +21,23 @@ impl BitBoard {
         BitBoard(num)
     }
 
+    // Find the coordinates of all pieces on a bitboard
+    pub fn all_coords(&self) -> Vec<Square> {
+        let mut bb = self.clone();
+        let mut coords: Vec<Square> = Vec::new();
+
+        loop {
+            let lsb: u64 = bb.0.trailing_zeros().into();
+            if lsb >= 64 {
+                break;
+            }
+
+            coords.push(Square::new(lsb as u8 % 8, lsb as u8 / 8));
+            bb.0 ^= 1 << lsb;
+        }
+        coords
+    }
+
     ///  parallel prefix-algorithm
     ///  Mirror a bitboard horizontaly around the center
     pub fn mirror_h(&self) -> BitBoard {

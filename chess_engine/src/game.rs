@@ -10,7 +10,7 @@ pub enum LegalMove {
     EnPassant, // not real move
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Square(pub u8, pub u8);
 impl Square {
     pub fn new(file: u8, rank: u8) -> Self {
@@ -31,10 +31,29 @@ pub const FULL_COL: u64 = 0x0101010101010101;
 pub const ROW: u64 = 8;
 pub const COL: u64 = 8;
 
-const ROOK_MOVEMENT: [(i8, i8); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
-const BISHOP_MOVEMENT: [(i8, i8); 4] = [(1, 1), (1, -1), (-1, 1), (-1, -1)];
+const ROOK_OFFSETS: [(i8, i8); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+const BISHOP_OFFSETS: [(i8, i8); 4] = [(1, 1), (1, -1), (-1, 1), (-1, -1)];
 // Only contains right side as will be mirrored to the other side
-const RIGHT_SIDE_KNIGHT_MOVEMENT: [(i8, i8); 4] = [(1, 2), (2, 1), (2, -1), (1, -2)];
+const KNIGHT_OFFSETS: [(i8, i8); 8] = [
+    (1, 2),
+    (2, 1),
+    (2, -1),
+    (1, -2),
+    (-1, -2),
+    (-2, -1),
+    (-2, 1),
+    (-1, 2),
+];
+const KING_OFFSETS: [(i8, i8); 8] = [
+    (0, 1),
+    (1, 1),
+    (1, 0),
+    (1, -1),
+    (0, -1),
+    (-1, -1),
+    (-1, 0),
+    (-1, 1),
+];
 pub struct Pieces {}
 impl Pieces {
     pub const PAWN: usize = 0;
@@ -131,7 +150,29 @@ impl Game {
         None
     }
 
-    pub fn legal_moves(&self, sqr: Square) -> Option<()> {
+    /// Function to determine wether a board is in check
+    pub fn in_check(&self, side: usize) -> bool {
+        let enemy = if side == Sides::WHITE {
+            Sides::WHITE
+        } else {
+            Sides::BLACK
+        };
+
+        let mut bb = BitBoard(0);
+        for piece in self.pieces[enemy] {
+            bb |= piece
+                .all_coords()
+                .iter()
+                .map(|sqr| self.legal_moves(*sqr).unwrap())
+                .fold(BitBoard(0), |bb, attack| bb | attack);
+        }
+
+        println!("{}", bb);
+
+        false
+    }
+
+    pub fn legal_moves(&self, sqr: Square) -> Option<BitBoard> {
         let piece_type = self.find_piece_type(sqr)?;
         let side = self.find_side(sqr)?;
 
@@ -141,11 +182,12 @@ impl Game {
             Pieces::KNIGHT => self.legal_knight_moves(Square::new(2, 3), side),
             Pieces::ROOK => self.legal_rook_moves(sqr, side),
             Pieces::QUEEN => self.legal_queen_moves(sqr, side),
+            Pieces::KING => self.legal_king_moves(Square::new(3, 4), side),
             _ => todo!(),
         };
 
-        println!("{}", bb);
-        Some(())
+        println!("Yap {}", self.in_check(Sides::WHITE));
+        Some(bb)
     }
 
     // Generate a bitboard with all friendly pieces
@@ -220,12 +262,12 @@ impl Game {
     }
 
     pub fn legal_bishop_moves(&self, sqr: Square, side: usize) -> BitBoard {
-        self.generate_sliding_moves(sqr, side, &BISHOP_MOVEMENT)
+        self.generate_sliding_moves(sqr, side, &BISHOP_OFFSETS)
     }
 
     pub fn legal_knight_moves(&self, sqr: Square, side: usize) -> BitBoard {
         let mut bb = BitBoard(0);
-        for (dx, dy) in RIGHT_SIDE_KNIGHT_MOVEMENT {
+        for (dx, dy) in KNIGHT_OFFSETS {
             let x = match sqr.0.checked_add_signed(dx) {
                 Some(n) if n <= 7 => n,
                 _ => continue,
@@ -238,25 +280,41 @@ impl Game {
             let mv = BitBoard::from_square(Square::new(x, y));
             bb |= mv;
         }
-        let mirror = bb.mirror_h();
 
-        bb |= mirror;
         bb &= !self.friendly(side);
 
         bb
     }
 
     pub fn legal_rook_moves(&self, sqr: Square, side: usize) -> BitBoard {
-        self.generate_sliding_moves(sqr, side, &ROOK_MOVEMENT)
+        self.generate_sliding_moves(sqr, side, &ROOK_OFFSETS)
     }
 
     pub fn legal_queen_moves(&self, sqr: Square, side: usize) -> BitBoard {
-        self.generate_sliding_moves(sqr, side, &BISHOP_MOVEMENT)
-            | self.generate_sliding_moves(sqr, side, &ROOK_MOVEMENT)
+        self.generate_sliding_moves(sqr, side, &BISHOP_OFFSETS)
+            | self.generate_sliding_moves(sqr, side, &ROOK_OFFSETS)
     }
 
     pub fn legal_king_moves(&self, sqr: Square, side: usize) -> BitBoard {
-        let bb = BitBoard(0);
+        let mut bb = BitBoard(0);
+
+        let mut x: u8 = 0;
+        let mut y: u8 = 0;
+
+        for (dx, dy) in KING_OFFSETS {
+            x = match sqr.0.checked_add_signed(dx) {
+                Some(n) if n <= 7 => n,
+                _ => break,
+            };
+
+            y = match sqr.1.checked_add_signed(dy) {
+                Some(n) if n <= 7 => n,
+                _ => break,
+            };
+
+            let mv = BitBoard::from_square(Square::new(x, y));
+            bb |= mv & !self.friendly(side);
+        }
 
         bb
     }
