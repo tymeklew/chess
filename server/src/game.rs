@@ -7,6 +7,7 @@ use std::io::Error;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
+#[derive(Debug)]
 pub enum GameStatus {
     Ongoing,
     Draw,
@@ -21,6 +22,7 @@ struct GameEvent {
     data: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct Game {
     draw_offered: Option<Uuid>,
     //Chat message to be sent id is the player who sent it
@@ -42,25 +44,35 @@ impl Game {
         tokio::spawn(async move {
             let mut players = [p1 , p2];
 
+
             loop {
                 if let Some((id, txt)) = &self.chat {
-                    self.broadcast_message(*id , txt.clone()).await.unwrap();
+                    for mut p in &players {
+                        if p.id() == *id {
+                            continue;
+                        }
+
+                    let data = serde_json::to_string(&GameEvent {
+                        msg_type : "CHAT".into(),
+                        data : Some(txt.into())
+                }).unwrap();
+
+                    p.sock().send(Message::Text(data)).await.unwrap();
+            }
+
                     self.chat = None;
                 }
 
                 // Little fix for the tokio::select! macro
                 let fix = players.split_at_mut(1);
                 tokio::select! {
-                    val = fix.0[0].sock().recv() => self.handle_message(val , players[1].id()).await.unwrap(),
-                    val = fix.1[1].sock().recv() => self.handle_message(val , players[2].id()).await.unwrap(),
+                    val = fix.0[0].sock().recv() => self.handle_message(val , players[0].id()).await.unwrap(),
+                    val = fix.1[0].sock().recv() => self.handle_message(val , players[1].id()).await.unwrap(),
                 };
             }
         })
     }
 
-    async fn broadcast_message(&mut self ,to : Uuid, msg: String) -> Result<()> {
-        Ok(())
-    }
 
     async fn handle_message(&mut self, msg: AxumMessageResult, id: Uuid) -> Result<()> {
         if let None = msg {
