@@ -1,22 +1,20 @@
 #![allow(dead_code)]
 
 mod board;
+mod bootstrap;
 mod game;
 mod state;
 
+#[cfg(test)]
 mod tests {
-    use crate::{
-        board::BitBoard,
-        game::{Game, Pieces, Sides, Square},
-    };
-    use std::fmt::Display;
+    use crate::game::{Square , Game};
 
     #[test]
     fn it_works() {
         let mut game = Game::new();
         game.init();
 
-        let x = game.legal_moves(Square::new(4, 0));
+        game.legal_moves(Square::new(4, 0));
     }
 }
 

@@ -1,5 +1,4 @@
 use core::panic;
-
 use crate::{board::BitBoard, state::State};
 
 pub enum LegalMove {
@@ -8,6 +7,11 @@ pub enum LegalMove {
     Promotion, // engine should always promote to knight TODO
     Castle,
     EnPassant, // not real move
+}
+
+pub struct PossibleActions {
+    attack : BitBoard,
+    mvs : BitBoard,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -163,30 +167,50 @@ impl Game {
             bb |= piece
                 .all_coords()
                 .iter()
-                .map(|sqr| self.legal_moves(*sqr).unwrap())
+                .map(|sqr| self.psuedo_legal_moves(*sqr).unwrap())
                 .fold(BitBoard(0), |bb, attack| bb | attack);
         }
-
         println!("{}", bb);
 
-        false
+        (self.pieces[side][Pieces::KING] & bb).0 > 0  
     }
 
-    pub fn legal_moves(&self, sqr: Square) -> Option<BitBoard> {
+    pub fn legal_moves(&self , sqr : Square) -> BitBoard {
+        let side = self.find_side(sqr).unwrap();
+        let mv = self.psuedo_legal_moves(sqr).unwrap();
+
+        mv
+        //self.in_check(side);
+    }
+
+    pub fn psuedo_legal_moves(&self, sqr: Square) -> Option<BitBoard> {
         let piece_type = self.find_piece_type(sqr)?;
         let side = self.find_side(sqr)?;
 
         let bb = match piece_type {
             Pieces::PAWN => self.legal_pawn_moves(sqr, side),
             Pieces::BISHOP => self.legal_bishop_moves(sqr, side),
-            Pieces::KNIGHT => self.legal_knight_moves(Square::new(2, 3), side),
+            Pieces::KNIGHT => self.legal_knight_moves(sqr, side),
             Pieces::ROOK => self.legal_rook_moves(sqr, side),
             Pieces::QUEEN => self.legal_queen_moves(sqr, side),
-            Pieces::KING => self.legal_king_moves(Square::new(3, 4), side),
+            Pieces::KING => self.legal_king_moves(sqr, side),
+            _ => todo!(),
+        };
+        Some(bb)
+    }
+
+    fn legal_attacks(&self , sqr : Square , side : usize) -> Option<BitBoard> {
+        let piece_type = self.find_piece_type(sqr)?;
+        
+        let bb = match piece_type {
+            Pieces::BISHOP => self.legal_bishop_moves(sqr, side),
+            Pieces::KNIGHT => self.legal_knight_moves(sqr, side),
+            Pieces::ROOK => self.legal_rook_moves(sqr, side),
+            Pieces::QUEEN => self.legal_queen_moves(sqr, side),
+            Pieces::KING => self.legal_king_moves(sqr, side),
             _ => todo!(),
         };
 
-        println!("Yap {}", self.in_check(Sides::WHITE));
         Some(bb)
     }
 
