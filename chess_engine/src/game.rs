@@ -20,6 +20,10 @@ impl Square {
     pub fn new(file: u8, rank: u8) -> Self {
         Self(file, rank)
     }
+
+    pub fn to_idx(&self) -> usize {
+        (self.0 + self.1 * 8).into()
+    }
 }
 
 impl std::ops::Add for Square {
