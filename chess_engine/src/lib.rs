@@ -1,18 +1,22 @@
-mod game;
-mod pieces;
 mod attacks;
 mod board;
+mod game;
+mod pieces;
 
 #[cfg(test)]
 mod tests {
-    use crate::{attacks::{bishop_attacks, black_pawn_attacks, king_attacks, knight_attacks, queen_attacks, rook_attacks, white_pawn_attacks, RAY_ATTACKS}, board::Bitboard, game::Game};
-
+    use crate::game::Game;
 
     #[test]
     fn it_works() {
         let mut game = Game::new();
         game.init_board();
 
+        let legals = game.pseudo_legal_moves(crate::pieces::Sides::White);
+
+        for l in legals {
+            println!("{}", l);
+        }
     }
 }
 
