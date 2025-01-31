@@ -1,24 +1,18 @@
-#![allow(dead_code)]
-
-mod board;
-mod bootstrap;
-mod attacks;
 mod game;
-mod state;
-mod square;
+mod pieces;
+mod attacks;
+mod board;
 
 #[cfg(test)]
 mod tests {
-    use crate::{board::BitBoard, bootstrap::{BISHOP_ATTACKS, QUEEN_ATTACKS, ROOK_ATTACKS}, game::{Game, Square, FULL_COL}};
+    use crate::{attacks::{bishop_attacks, black_pawn_attacks, king_attacks, knight_attacks, queen_attacks, rook_attacks, white_pawn_attacks, RAY_ATTACKS}, board::Bitboard, game::Game};
+
 
     #[test]
     fn it_works() {
-        println!("{}" , BitBoard(ROOK_ATTACKS[35]));
-        println!("{}" , BitBoard(QUEEN_ATTACKS[35]));
-        /*let mut game = Game::new();
-        game.init();
+        let mut game = Game::new();
+        game.init_board();
 
-        game.legal_moves(Square::new(4, 0));*/
     }
 }
 
