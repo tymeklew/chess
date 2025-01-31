@@ -3,14 +3,15 @@ use std::collections::HashMap;
 use crate::attacks::{pawn_moves, sliding_attacks, step_attacks};
 use crate::board::Bitboard;
 use crate::pieces::{Pieces, Sides, ALL_PIECES, PIECES_COUNT, SIDES_COUNT};
+use crate::square::Square;
 
 pub struct Move {
-    from : usize,
-    to : usize
+    from : Square,
+    to : Square,
 }
 
 impl Move {
-    pub fn new(from : usize , to : usize) -> Self {
+    pub fn new(from : Square , to : Square) -> Self {
         Move {
             from,
             to,
@@ -87,8 +88,8 @@ impl Game {
             _ => Sides::Black,
         };
 
-        let from = Bitboard(1 << mv.from);
-        let to = Bitboard(1 << mv.to);
+        let from = Bitboard(1 << mv.from.idx());
+        let to = Bitboard(1 << mv.to.idx());
 
         let mvs = self.pseudo_legal_moves(side);
 
@@ -98,7 +99,7 @@ impl Game {
                     self.sides[side] ^= from;
                     self.sides[side] |= to;
 
-                    let piece = self.piece_type(mv.from , side);
+                    let piece = self.piece_type(mv.from.idx() , side);
                     self.pieces[side][piece] ^= from;
                     self.pieces[side][piece] |= to;
 
