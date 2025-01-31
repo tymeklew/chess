@@ -1,7 +1,7 @@
 use std::fmt::Display;
-use std::ops::{BitAndAssign, BitOr, BitOrAssign, Not};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy , PartialEq , Eq , Hash)]
 pub struct Bitboard(pub u64);
 
 impl Default for Bitboard {
@@ -48,5 +48,27 @@ impl Not for Bitboard {
 
     fn not(self) -> Self::Output {
         Bitboard(!self.0)
+    }
+}
+
+impl BitAnd for Bitboard {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Bitboard(self.0 & rhs.0)
+    }
+}
+
+impl BitXor for Bitboard {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Bitboard(self.0 ^ rhs.0)
+    }
+}
+
+impl BitXorAssign for Bitboard {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        self.0 ^= rhs.0;
     }
 }

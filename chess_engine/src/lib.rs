@@ -5,19 +5,19 @@ mod pieces;
 
 #[cfg(test)]
 mod tests {
-    use crate::game::Game;
+    use crate::{attacks::pawn_moves, board::Bitboard, game::{Game, Move}};
 
     #[test]
     fn it_works() {
         let mut game = Game::new();
         game.init_board();
 
-        let legals = game.pseudo_legal_moves(crate::pieces::Sides::White);
+        game.display();
+        let real = game.make_move(Move::new(8 , 8 * 3));
+        println!(
+            "{}" , real
+        );
+        game.display();
 
-        for l in legals {
-            println!("{}", l);
-        }
     }
 }
-
-// R N B Q K B N R

@@ -1,6 +1,22 @@
-use crate::attacks::{ sliding_attacks, step_attacks};
+use std::collections::HashMap;
+
+use crate::attacks::{pawn_moves, sliding_attacks, step_attacks};
 use crate::board::Bitboard;
 use crate::pieces::{Pieces, Sides, ALL_PIECES, PIECES_COUNT, SIDES_COUNT};
+
+pub struct Move {
+    from : usize,
+    to : usize
+}
+
+impl Move {
+    pub fn new(from : usize , to : usize) -> Self {
+        Move {
+            from,
+            to,
+        }
+    }
+}
 
 const ROOK_RAY_INDEX: [usize; 4] = [0, 1, 4, 5];
 const BISHOP_RAY_INDEX: [usize; 4] = [2, 3, 6, 7];
@@ -12,6 +28,7 @@ const WHITE_PAWN_DELTAS: [i8; 2] = [7, 9];
 pub struct Game {
     pieces: [[Bitboard; PIECES_COUNT]; SIDES_COUNT],
     sides: [Bitboard; SIDES_COUNT],
+    turn: usize,
 }
 
 impl Game {
@@ -19,6 +36,7 @@ impl Game {
         Game {
             pieces: Default::default(),
             sides: Default::default(),
+            turn: 0,
         }
     }
 
@@ -48,48 +66,101 @@ impl Game {
             .iter()
             .fold(Bitboard(0), |acc, x| acc | *x);
     }
+    
+    fn piece_type(&self , square : usize , side : Sides) -> Pieces {
+        for piece in ALL_PIECES {
+            if self.pieces[side][piece].0 & (1 << square) != 0 {
+                return piece;
+            }
+        }
+        // Temperory fix function call should never reach here
+        return Pieces::Pawn;
+    }
+
+    pub fn display(&self) {
+        println!("{}" , self.sides[Sides::White] | self.sides[Sides::Black]);
+    }
+
+    pub fn make_move(&mut self , mv : Move) -> bool {
+        let side = match self.turn % 2 {
+            0 => Sides::White,
+            _ => Sides::Black,
+        };
+
+        let from = Bitboard(1 << mv.from);
+        let to = Bitboard(1 << mv.to);
+
+        let mvs = self.pseudo_legal_moves(side);
+
+        match mvs.get(&from) {
+            Some(bb) => {
+                if bb.0 & to.0 != 0 {
+                    self.sides[side] ^= from;
+                    self.sides[side] |= to;
+
+                    let piece = self.piece_type(mv.from , side);
+                    self.pieces[side][piece] ^= from;
+                    self.pieces[side][piece] |= to;
+
+                    self.turn += 1;
+                    return true;
+                }
+                return false;
+            },
+            None => {return false}, 
+        }
+    }
 
     pub fn occupied(&self) -> Bitboard {
         self.sides[Sides::White] | self.sides[Sides::Black]
     }
 
-    pub fn in_check(&self , side : Sides) {
+    pub fn enemy(&self, side: Sides) -> Bitboard {
+        self.sides[match side {
+            Sides::White => Sides::Black,
+            Sides::Black => Sides::White,
+        }]
+    }
+
+    pub fn in_check(&self, side: Sides) {
         todo!()
     }
 
-    pub fn legal_moves(&self , side_to_move : Sides) {
-    } 
+    pub fn legal_moves(&self, side_to_move: Sides) {}
 
-    pub fn pseudo_legal_moves(&self , side_to_move : Sides) -> Vec<Bitboard> {
-        let mut moves = Vec::new();
+    // Corrolates the position of the pieces on the board to the bitboard for attack
+    pub fn pseudo_legal_moves(&self, side_to_move: Sides) -> HashMap<Bitboard , Bitboard> {
+        let mut moves = HashMap::new();
         let occupied = self.occupied();
 
         for piece in ALL_PIECES {
             for i in 0..64 {
                 let piece_bb = self.pieces[side_to_move][piece];
-                if piece_bb.0 ^ (1 << i) == 0 {
+                if piece_bb.0 & (1 << i) == 0 {
                     continue;
                 }
 
-                let mut bb = match piece {
-                    Pieces::Pawn => match side_to_move {
-                        Sides::Black => step_attacks(i, &BLACK_PAWN_DELTAS),
-                        Sides::White => step_attacks(i , &WHITE_PAWN_DELTAS)
+                let bb = match piece {
+                    Pieces::Pawn => {
+                        let bb = match side_to_move {
+                            Sides::Black => step_attacks(i, &BLACK_PAWN_DELTAS),
+                            Sides::White => step_attacks(i, &WHITE_PAWN_DELTAS),
+                        };
+                        bb & self.enemy(side_to_move) | pawn_moves(i, side_to_move, occupied)
                     }
-                    Pieces::Rook => sliding_attacks(i , occupied , &ROOK_RAY_INDEX),
-                    Pieces::Knight => step_attacks(i , &KNIGHT_DELTAS),
-                    Pieces::Bishop => sliding_attacks(i, occupied , &BISHOP_RAY_INDEX),
-                    Pieces::Queen => sliding_attacks(i , occupied , &ROOK_RAY_INDEX) | sliding_attacks(i , occupied , &BISHOP_RAY_INDEX),
-                    Pieces::King => step_attacks(i , &KING_DELTAS),
+                    Pieces::Rook => sliding_attacks(i, occupied, &ROOK_RAY_INDEX),
+                    Pieces::Knight => step_attacks(i, &KNIGHT_DELTAS),
+                    Pieces::Bishop => sliding_attacks(i, occupied, &BISHOP_RAY_INDEX),
+                    Pieces::Queen => {
+                        sliding_attacks(i, occupied, &ROOK_RAY_INDEX)
+                            | sliding_attacks(i, occupied, &BISHOP_RAY_INDEX)
+                    }
+                    Pieces::King => step_attacks(i, &KING_DELTAS),
                 };
 
-                moves.push(bb);
-
+                moves.insert(Bitboard(1 << i) , bb & !self.sides[side_to_move]);
             }
         }
-
         moves
     }
-
-
 }

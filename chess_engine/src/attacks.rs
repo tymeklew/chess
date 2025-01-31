@@ -1,4 +1,4 @@
-use crate::board::Bitboard;
+use crate::{board::Bitboard, pieces::Sides};
 
 pub static RAY_ATTACKS: [[u64; 64]; 8] = init_rays();
 const RAYS: [i8; 8] = [1, -1, 7, -7, 8, -8, 9, -9];
@@ -62,4 +62,18 @@ pub fn step_attacks(square: usize, deltas: &[i8]) -> Bitboard {
         }
     }
     attacks
+}
+
+pub fn pawn_moves(square: usize, side: Sides, occupied: Bitboard) -> Bitboard {
+    // Assume white for now
+    let mut moves = Bitboard(0);
+    if (1 << (square + 8)) & occupied.0 == 0 {
+        moves |= Bitboard(1 << (square + 8));
+    }
+
+    if (1 << (square)) & (0b11111111 << (2 * 8)) == 0 {
+        moves |= Bitboard(1 << (square + 16));
+    }
+
+    moves
 }
