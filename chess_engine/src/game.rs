@@ -60,8 +60,8 @@ impl Game {
     pub fn legal_moves(&self , side_to_move : Sides) {
     } 
 
-    pub fn pseudo_legal_moves(&self , side_to_move : Sides) -> [Bitboard ; PIECES_COUNT] {
-        let mut moves = [Bitboard(0) ; PIECES_COUNT];
+    pub fn pseudo_legal_moves(&self , side_to_move : Sides) -> Vec<Bitboard> {
+        let mut moves = Vec::new();
         let occupied = self.occupied();
 
         for piece in ALL_PIECES {
@@ -83,7 +83,7 @@ impl Game {
                     Pieces::King => step_attacks(i , &KING_DELTAS),
                 };
 
-                moves[piece] |= bb;
+                moves.push(bb);
 
             }
         }
