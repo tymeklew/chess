@@ -6,16 +6,13 @@ use crate::pieces::{Pieces, Sides, ALL_PIECES, PIECES_COUNT, SIDES_COUNT};
 use crate::square::Square;
 
 pub struct Move {
-    from : Square,
-    to : Square,
+    from: Square,
+    to: Square,
 }
 
 impl Move {
-    pub fn new(from : Square , to : Square) -> Self {
-        Move {
-            from,
-            to,
-        }
+    pub fn new(from: Square, to: Square) -> Self {
+        Move { from, to }
     }
 }
 
@@ -67,8 +64,8 @@ impl Game {
             .iter()
             .fold(Bitboard(0), |acc, x| acc | *x);
     }
-    
-    fn piece_type(&self , square : usize , side : Sides) -> Pieces {
+
+    fn piece_type(&self, square: usize, side: Sides) -> Pieces {
         for piece in ALL_PIECES {
             if self.pieces[side][piece].0 & (1 << square) != 0 {
                 return piece;
@@ -79,10 +76,10 @@ impl Game {
     }
 
     pub fn display(&self) {
-        println!("{}" , self.sides[Sides::White] | self.sides[Sides::Black]);
+        println!("{}", self.sides[Sides::White] | self.sides[Sides::Black]);
     }
 
-    pub fn make_move(&mut self , mv : Move) -> bool {
+    pub fn make_move(&mut self, mv: Move) -> bool {
         let side = match self.turn % 2 {
             0 => Sides::White,
             _ => Sides::Black,
@@ -99,7 +96,7 @@ impl Game {
                     self.sides[side] ^= from;
                     self.sides[side] |= to;
 
-                    let piece = self.piece_type(mv.from.idx() , side);
+                    let piece = self.piece_type(mv.from.idx(), side);
                     self.pieces[side][piece] ^= from;
                     self.pieces[side][piece] |= to;
 
@@ -107,8 +104,8 @@ impl Game {
                     return true;
                 }
                 return false;
-            },
-            None => {return false}, 
+            }
+            None => return false,
         }
     }
 
@@ -130,7 +127,7 @@ impl Game {
     pub fn legal_moves(&self, side_to_move: Sides) {}
 
     // Corrolates the position of the pieces on the board to the bitboard for attack
-    pub fn pseudo_legal_moves(&self, side_to_move: Sides) -> HashMap<Bitboard , Bitboard> {
+    pub fn pseudo_legal_moves(&self, side_to_move: Sides) -> HashMap<Bitboard, Bitboard> {
         let mut moves = HashMap::new();
         let occupied = self.occupied();
 
@@ -159,7 +156,7 @@ impl Game {
                     Pieces::King => step_attacks(i, &KING_DELTAS),
                 };
 
-                moves.insert(Bitboard(1 << i) , bb & !self.sides[side_to_move]);
+                moves.insert(Bitboard(1 << i), bb & !self.sides[side_to_move]);
             }
         }
         moves

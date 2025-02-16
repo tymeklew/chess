@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
-#[derive(Clone, Copy , PartialEq , Eq , Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Bitboard(pub u64);
 
 impl Default for Bitboard {
