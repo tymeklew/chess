@@ -1,72 +1,36 @@
+mod auth;
 mod game;
 mod player;
 
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::any;
+use axum::routing::{any, post};
 use axum::Router;
 use axum_extra::headers::UserAgent;
 use axum_extra::TypedHeader;
 use futures::lock::Mutex;
-use futures::{SinkExt, StreamExt};
-use game::Game;
 use log::info;
-use player::Player;
-use serde_json::{json, Value};
-use std::borrow::BorrowMut;
-use std::collections::HashMap;
+use sqlx::postgres::PgPoolOptions;
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
-use tokio::task::JoinHandle;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use uuid::Uuid;
 
-const CHANNEL_BUFFER_SIZE: usize = 100;
-pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
+pub struct AppError(anyhow::Error);
 pub struct AppState {
-    lobby: HashMap<Uuid, Player>,
-    games: Vec<JoinHandle<()>>,
+    pool: sqlx::PgPool,
 }
 
-impl AppState {
-    pub fn join(&mut self, sock: WebSocket) {
-        let player = Player::new(sock);
-        let id = player.id();
-
-        self.lobby.insert(id, player);
-        self.compatible(id);
-    }
-
-    // Find compatible opponent for the last player that joined
-    pub fn compatible(&mut self, id: Uuid) {
-        for player in &mut self.lobby.values() {
-            if player.id() != id {
-                info!("Found match");
-                let p1 = self.lobby.remove(&player.id()).unwrap();
-                let p2 = self.lobby.remove(&id);
-
-                self.start(p1, p2.unwrap());
-                break;
-            }
-        }
-    }
-
-    // Start a new game with the players from that index
-    pub fn start(&mut self, p1: Player, p2: Player) {
-        Game::new().start(p1, p2);
-    }
-}
+impl AppState {}
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
-
+    // Setup the logger
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
@@ -81,13 +45,24 @@ async fn main() {
         Err(_) => "8080".to_string(),
     };
 
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await
+        .expect("Failed to connect to database");
+
     //TODO New game implementation
-    let state = Arc::new(Mutex::new(AppState {
-        lobby: HashMap::new(),
-        games: Vec::new(),
-    }));
+    let state = Arc::new(Mutex::new(AppState { pool }));
 
     let app = Router::new()
+        .nest(
+            "/api",
+            Router::new()
+                .route("/auth/signup", post(auth::signup))
+                .route("/auth/login", post(auth::login)),
+        )
         .route("/ws", any(ws_handler))
         .layer(
             TraceLayer::new_for_http()
@@ -105,8 +80,8 @@ async fn main() {
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .await
-    .unwrap();
+    .await?;
+    Ok(())
 }
 
 async fn ws_handler(
@@ -133,5 +108,23 @@ async fn handle_socket(mut sock: WebSocket, addr: SocketAddr, state: Arc<Mutex<A
         // If we can not send messages, there is no way to salvage the statemachine anyway.
         return;
     }
-    state.lock().await.join(sock);
+}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> axum::response::Response {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Internal Server Error: {:#?}", self.0),
+        )
+            .into_response()
+    }
+}
+
+impl<E> From<E> for AppError
+where
+    E: Into<anyhow::Error>,
+{
+    fn from(err: E) -> Self {
+        Self(err.into())
+    }
 }
