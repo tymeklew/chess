@@ -1,13 +1,13 @@
 mod auth;
+mod error;
 mod game;
 mod player;
 
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{ConnectInfo, State, WebSocketUpgrade};
-use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{any, post};
-use axum::Router;
+use axum::{Extension, Router};
 use axum_extra::headers::UserAgent;
 use axum_extra::TypedHeader;
 use futures::lock::Mutex;
@@ -20,7 +20,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-pub struct AppError(anyhow::Error);
+#[derive(Clone)]
 pub struct AppState {
     pool: sqlx::PgPool,
 }
@@ -57,13 +57,10 @@ async fn main() -> anyhow::Result<()> {
     let state = Arc::new(Mutex::new(AppState { pool }));
 
     let app = Router::new()
-        .nest(
-            "/api",
-            Router::new()
-                .route("/auth/signup", post(auth::signup))
-                .route("/auth/login", post(auth::login)),
-        )
         .route("/ws", any(ws_handler))
+        .layer(Extension(state.clone()))
+        .route("/api/auth/signup", post(auth::signup))
+        .route("/api/auth/login", post(auth::login))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(DefaultMakeSpan::default().include_headers(true)),
@@ -100,31 +97,12 @@ async fn ws_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, addr, state))
 }
 
-async fn handle_socket(mut sock: WebSocket, addr: SocketAddr, state: Arc<Mutex<AppState>>) {
+async fn handle_socket(mut sock: WebSocket, addr: SocketAddr, _: Arc<Mutex<AppState>>) {
     if sock.send(Message::Ping(vec![1, 2, 3])).await.is_ok() {
     } else {
         println!("Could not send ping {addr}!");
         // no Error here since the only thing we can do is to close the connection.
         // If we can not send messages, there is no way to salvage the statemachine anyway.
         return;
-    }
-}
-
-impl IntoResponse for AppError {
-    fn into_response(self) -> axum::response::Response {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Internal Server Error: {:#?}", self.0),
-        )
-            .into_response()
-    }
-}
-
-impl<E> From<E> for AppError
-where
-    E: Into<anyhow::Error>,
-{
-    fn from(err: E) -> Self {
-        Self(err.into())
     }
 }

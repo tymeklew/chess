@@ -1,5 +1,5 @@
-CREATE TYPE status AS ENUM ('pending', 'accepted', 'rejected' , 'rejected');
-CREATE TABLE "users" IF NOT EXISTS (
+CREATE TYPE status AS ENUM ('pending', 'accepted', 'rejected');
+CREATE TABLE IF NOT EXISTS "users" (
   "user_id" uuid PRIMARY KEY NOT NULL,
   "email" varchar(320) NOT NULL,
   "username" varchar(20) NOT NULL,
@@ -7,13 +7,13 @@ CREATE TABLE "users" IF NOT EXISTS (
   "created_at" TIMESTAMP DEFAULT 'now()'
 );
 
-CREATE TABLE "friendships" IF NOT EXISTS (
+CREATE TABLE IF NOT EXISTS "friendships"  (
   "user_id" uuid NOT NULL,
   "friend_id" uuid NOT NULL,
   PRIMARY KEY ("user_id", "friend_id")
 );
 
-CREATE TABLE "friend_requests" IF NOT EXISTS (
+CREATE TABLE IF NOT EXISTS "friend_requests" (
   "request_id" uuid PRIMARY KEY NOT NULL,
   "user_id" uuid NOT NULL,
   "friend_id" uuid NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE "friend_requests" IF NOT EXISTS (
   "created_at" timestamp NOT NULL DEFAULT 'now()'
 );
 
-CREATE TABLE "games" IF NOT EXISTS (
+CREATE TABLE IF NOT EXISTS "games" (
   "game_id" uuid PRIMARY KEY NOT NULL,
   "white_id" uuid NOT NULL,
   "black_id" uuid NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE "games" IF NOT EXISTS (
   "winner" uuid
 );
 
-CREATE TABLE "chat" IF NOT EXISTS (
+CREATE TABLE IF NOT EXISTS "chat" (
   "chat_id" uuid PRIMARY KEY NOT NULL,
   "game_id" uuid NOT NULL,
   "sender_id" uuid NOT NULL,

@@ -1,5 +1,5 @@
 -- Add migration script here
-CREATE TABLE "challenges" IF NOT EXISTS (
+CREATE TABLE IF NOT EXISTS "challenges" (
   "challenge_id" uuid PRIMARY KEY NOT NULL,
   "challenger_id" uuid NOT NULL,
   "opponent_id" uuid NOT NULL,
