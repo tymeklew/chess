@@ -22,14 +22,12 @@ const CREATE_USER: &str = r#"
     VALUES ($1 , $2 , $3 , $4)
 "#;
 const USER_EXISTS: &str = r#"
-    SELECT 1 FROM users WHERE email = $1 OR username = $2
-"#;
-const LOGIN_USER: &str = r#"
-    SELECT user_id , password FROM users WHERE email = $1 OR username = $1
-"#;
-const CREATE_SESSION: &str = r#"
-    INSERT INTO sessions (session_id , user_id)
-    VALUES ($1 , $2)
+SELECT
+    CASE
+        WHEN EXISTS (SELECT 1 FROM users WHERE email = $1) THEN 'email'
+        WHEN EXISTS (SELECT 1 FROM users WHERE username = $2) THEN 'username'
+        ELSE 'none'
+    END AS conflict_field;
 "#;
 
 #[derive(Deserialize, Validate)]
@@ -47,21 +45,23 @@ pub struct CreateUser {
 }
 
 pub async fn signup(
-    State(state): State<Arc<Mutex<AppState>>>,
+    State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateUser>,
 ) -> Result<StatusCode, AppError> {
     payload.validate()?;
-    let pool = &state.lock().await.pool;
+    let pool = &state.pool;
 
-    let exists = query(USER_EXISTS)
+    let result = query(USER_EXISTS)
         .bind(&payload.email)
         .bind(&payload.username)
-        .fetch_optional(pool)
+        .fetch_one(pool)
         .await?;
 
-    if exists.is_some() {
-        return Ok(StatusCode::CONFLICT);
-    }
+    match result.get(0) {
+        Some("email") => return Err(AppError::ConflictError("The provided email is already taken".into())),
+        Some("username") => return Err(AppError::ConflictError("The provided username is already taken".into())),
+        _ => {},
+    };
 
     let id = Uuid::new_v4();
     let hashed_password = hash(payload.password, DEFAULT_COST)?;
@@ -83,12 +83,20 @@ pub struct LoginUser {
     pub password: String,
 }
 
+const LOGIN_USER: &str = r#"
+    SELECT user_id , password FROM users WHERE email = $1 OR username = $1
+"#;
+const CREATE_SESSION: &str = r#"
+    INSERT INTO sessions (session_id , user_id)
+    VALUES ($1 , $2)
+"#;
+
 pub async fn login(
-    State(state): State<Arc<Mutex<AppState>>>,
+    State(state): State<Arc<AppState>>,
     jar: CookieJar,
     Json(payload): Json<LoginUser>,
 ) -> Result<CookieJar, AppError> {
-    let pool = &state.lock().await.pool;
+    let pool = &state.pool;
 
     let user = query(LOGIN_USER)
         .bind(&payload.identifier)
@@ -115,11 +123,11 @@ pub async fn login(
     Ok(jar.add(Cookie::new("session_id", session_id.to_string())))
 }
 
-pub struct AuthenticatedUser(Uuid);
+pub struct AuthenticatedUser(pub Uuid);
 
 const SESSION_QUERY: &str = r#"
     SELECT user_id FROM sessions
-    WHERE session_id = $1
+    WHERE session_id = $1 AND created_at > CURRENT_TIMESTAMP - INTERVAL '2 weeks' 
 "#;
 #[async_trait]
 impl<S> FromRequestParts<S> for AuthenticatedUser
@@ -131,27 +139,29 @@ where
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let jar = CookieJar::from_headers(&parts.headers);
         let session_id = match jar.get("session_id") {
-            Some(id) => id.value().to_string(),
+            Some(id) => Uuid::parse_str(id.value())
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?,
             None => return Err(StatusCode::UNAUTHORIZED.into_response()),
         };
 
         let Extension(state) = parts
-            .extract::<Extension<Arc<Mutex<AppState>>>>()
+            .extract::<Extension<Arc<AppState>>>()
             .await
             .map_err(|err| err.into_response())?;
-        let pool = &state.lock().await.pool;
+        let pool = &state.pool;
 
-        let id = query(SESSION_QUERY)
+        log::debug!("Session id : {}", session_id);
+        let res = query(SESSION_QUERY)
             .bind(session_id)
             .fetch_optional(pool)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+        log::debug!("After request");
 
-        let row = match id {
+        let row = match res {
             Some(row) => row,
             None => return Err(StatusCode::UNAUTHORIZED.into_response()),
         };
-
         let user_id: Uuid = row.get(0);
 
         Ok(AuthenticatedUser(user_id))

@@ -1,5 +1,6 @@
 mod auth;
 mod error;
+mod friends;
 mod game;
 mod player;
 
@@ -54,10 +55,11 @@ async fn main() -> anyhow::Result<()> {
         .expect("Failed to connect to database");
 
     //TODO New game implementation
-    let state = Arc::new(Mutex::new(AppState { pool }));
+    let state = Arc::new(AppState { pool });
 
     let app = Router::new()
         .route("/ws", any(ws_handler))
+        .route("/api/friends/request", post(friends::friend_request))
         .layer(Extension(state.clone()))
         .route("/api/auth/signup", post(auth::signup))
         .route("/api/auth/login", post(auth::login))
@@ -82,7 +84,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn ws_handler(
-    State(state): State<Arc<Mutex<AppState>>>,
+    State(state): State<Arc<AppState>>,
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -97,7 +99,7 @@ async fn ws_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, addr, state))
 }
 
-async fn handle_socket(mut sock: WebSocket, addr: SocketAddr, _: Arc<Mutex<AppState>>) {
+async fn handle_socket(mut sock: WebSocket, addr: SocketAddr, _: Arc<AppState>) {
     if sock.send(Message::Ping(vec![1, 2, 3])).await.is_ok() {
     } else {
         println!("Could not send ping {addr}!");
