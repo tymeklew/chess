@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut};
+use std::{ops::{Index, IndexMut}, fmt::Display};
 
 use crate::board::Bitboard;
 
@@ -11,6 +11,15 @@ pub enum Sides {
     Black = 1,
 }
 
+impl Sides {
+    pub fn other(&self) -> Sides {
+        match self {
+            Sides::White => Sides::Black,
+            Sides::Black => Sides::White,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum Pieces {
     Pawn = 0,
@@ -19,6 +28,20 @@ pub enum Pieces {
     Bishop = 3,
     Queen = 4,
     King = 5,
+}
+
+impl Display for Pieces {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let piece = match self {
+            Pieces::Pawn => "Pawn",
+            Pieces::Rook => "Rook",
+            Pieces::Knight => "Knight",
+            Pieces::Bishop => "Bishop",
+            Pieces::Queen => "Queen",
+            Pieces::King => "King",
+        };
+        write!(f, "{}", piece)
+    }
 }
 
 pub const ALL_PIECES: [Pieces; 6] = [
