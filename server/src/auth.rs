@@ -6,13 +6,13 @@ use axum::{extract::State, http::StatusCode, Json};
 use axum::{Extension, RequestPartsExt};
 use axum_extra::extract::{cookie::Cookie, CookieJar};
 use bcrypt::{hash, DEFAULT_COST};
-use futures::lock::Mutex;
+use lazy_static::lazy_static;
+use regex::Regex;
 use serde::Deserialize;
 use sqlx::query;
 use sqlx::Row;
 use std::sync::Arc;
 use uuid::Uuid;
-use validator::Validate;
 
 use crate::error::AppError;
 use crate::AppState;
@@ -30,25 +30,34 @@ SELECT
     END AS conflict_field;
 "#;
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize)]
 pub struct CreateUser {
-    #[validate(email(message = "Invalid email"))]
     pub email: String,
-    #[validate(length(
-        min = 3,
-        max = 20,
-        message = "Invalid username must be between 3 and 20 characters"
-    ))]
     pub username: String,
-    #[validate(length(min = 3, max = 72))]
     pub password: String,
+}
+
+lazy_static! {
+    pub static ref PASSWORD_REGEX: Regex = Regex::new(
+        r#"(^(?=.*[A-Z]).*(?=.*[a-z]).*(?=.*[\d]).*(?=.*[.!?@%^&*\(\)\{\}\[\]]).*){8,72}"#
+    )
+    .unwrap();
+    pub static ref USERNAME_REGEX: Regex = Regex::new(r#"[A-za-z\d]{3,20}"#).unwrap();
+    pub static ref EMAIL_REGEX: Regex =
+        Regex::new(r#"^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,}$"#).unwrap();
 }
 
 pub async fn signup(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateUser>,
 ) -> Result<StatusCode, AppError> {
-    payload.validate()?;
+    /*if !(PASSWORD_REGEX.is_match(&payload.username)
+        & USERNAME_REGEX.is_match(&payload.username)
+        & EMAIL_REGEX.is_match(&payload.email))
+    {
+        return Err(StatusCode::BAD_REQUEST.into());
+    }*/
+
     let pool = &state.pool;
 
     let result = query(USER_EXISTS)

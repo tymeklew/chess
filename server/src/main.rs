@@ -60,8 +60,11 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/ws", any(ws_handler))
         .route("/api/friends/request", post(friends::friend_request))
-        .route("/api/friends/response",post(friends::respond_to_friend_request))
-        .route("/api/friends/cancel" , post(friends::cancel_friend_request))
+        .route(
+            "/api/friends/response",
+            post(friends::respond_to_friend_request),
+        )
+        .route("/api/friends/cancel", post(friends::cancel_friend_request))
         .route("/api/friends/search", get(friends::search_user))
         .layer(Extension(state.clone()))
         .route("/api/auth/signup", post(auth::signup))

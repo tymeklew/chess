@@ -11,8 +11,6 @@ pub enum AppError {
     Sqlx(#[from] sqlx::Error),
     #[error("Status code : {0}")]
     StatusCode(StatusCode),
-    #[error("Validator error : {0}")]
-    Validator(#[from] validator::ValidationErrors),
     #[error("Conflict")]
     ConflictError(String),
 }
@@ -22,7 +20,6 @@ impl IntoResponse for AppError {
         log::error!("Error occured : {}", self);
 
         match self {
-            Self::Validator(_) => StatusCode::BAD_REQUEST.into_response(),
             Self::StatusCode(code) => code.into_response(),
             Self::ConflictError(str) => (StatusCode::CONFLICT, str).into_response(),
             _ => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),

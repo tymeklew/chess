@@ -1,7 +1,7 @@
 use crate::{auth::AuthenticatedUser, error::AppError, AppState};
 use axum::extract::Query;
 use axum::{extract::State, http::StatusCode, Json};
-use serde::{Deserialize , Serialize};
+use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use sqlx::{error::ErrorKind, query};
 use std::sync::Arc;
@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct SearchUser {
-    username : String,
+    username: String,
 }
 
 #[derive(Serialize)]
@@ -18,7 +18,7 @@ pub struct User {
     username: String,
 }
 
-const SEARCH_QUERY : &str = r#"
+const SEARCH_QUERY: &str = r#"
 SELECT user_id , username 
 FROM users
 WHERE SIMILARITY(username , $1) > 0.3
@@ -27,17 +27,22 @@ LIMIT 10;
 "#;
 pub async fn search_user(
     State(state): State<Arc<AppState>>,
-    _ : AuthenticatedUser,
-    search : Query<SearchUser>
-) -> Result<Json<Vec<User>> , AppError> {
-    let res = query(SEARCH_QUERY).bind(search.username.clone()).fetch_all(&state.pool).await?;
+    _: AuthenticatedUser,
+    search: Query<SearchUser>,
+) -> Result<Json<Vec<User>>, AppError> {
+    let res = query(SEARCH_QUERY)
+        .bind(search.username.clone())
+        .fetch_all(&state.pool)
+        .await?;
 
-    Ok(Json(res.iter().map(|row| {
-        User {
-            user_id : row.get(0),
-            username : row.get(1)
-        }
-    }).collect()))
+    Ok(Json(
+        res.iter()
+            .map(|row| User {
+                user_id: row.get(0),
+                username: row.get(1),
+            })
+            .collect(),
+    ))
 }
 
 #[derive(Deserialize)]
@@ -77,10 +82,10 @@ pub async fn friend_request(
 
 #[derive(Deserialize)]
 pub struct FriendRequestCancellation {
-    request_id : Uuid
+    request_id: Uuid,
 }
 
-const CANCEL_FRIEND_REQUEST : &str = r#"
+const CANCEL_FRIEND_REQUEST: &str = r#"
     UPDATE friend_requests
     WHERE request_id = $1
     SET status = 'cancelled'
@@ -88,9 +93,12 @@ const CANCEL_FRIEND_REQUEST : &str = r#"
 pub async fn cancel_friend_request(
     State(state): State<Arc<AppState>>,
     _: AuthenticatedUser,
-    Json(payload): Json<FriendRequestCancellation>
-) -> Result<StatusCode , AppError> {
-    query(CANCEL_FRIEND_REQUEST).bind(payload.request_id).execute(&state.pool).await?;
+    Json(payload): Json<FriendRequestCancellation>,
+) -> Result<StatusCode, AppError> {
+    query(CANCEL_FRIEND_REQUEST)
+        .bind(payload.request_id)
+        .execute(&state.pool)
+        .await?;
     Ok(StatusCode::OK)
 }
 
