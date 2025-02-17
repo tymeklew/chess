@@ -58,9 +58,17 @@ pub async fn signup(
         .await?;
 
     match result.get(0) {
-        Some("email") => return Err(AppError::ConflictError("The provided email is already taken".into())),
-        Some("username") => return Err(AppError::ConflictError("The provided username is already taken".into())),
-        _ => {},
+        Some("email") => {
+            return Err(AppError::ConflictError(
+                "The provided email is already taken".into(),
+            ))
+        }
+        Some("username") => {
+            return Err(AppError::ConflictError(
+                "The provided username is already taken".into(),
+            ))
+        }
+        _ => {}
     };
 
     let id = Uuid::new_v4();

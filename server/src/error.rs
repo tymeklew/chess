@@ -14,7 +14,7 @@ pub enum AppError {
     #[error("Validator error : {0}")]
     Validator(#[from] validator::ValidationErrors),
     #[error("Conflict")]
-    ConflictError(String)
+    ConflictError(String),
 }
 
 impl IntoResponse for AppError {
@@ -24,7 +24,7 @@ impl IntoResponse for AppError {
         match self {
             Self::Validator(_) => StatusCode::BAD_REQUEST.into_response(),
             Self::StatusCode(code) => code.into_response(),
-            Self::ConflictError(str) => (StatusCode::CONFLICT , str).into_response(),
+            Self::ConflictError(str) => (StatusCode::CONFLICT, str).into_response(),
             _ => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
         }
     }
