@@ -20,7 +20,7 @@ impl Square {
         self.file
     }
 
-    pub fn from_idx(idx : usize) -> Square {
+    pub fn from_idx(idx: usize) -> Square {
         Square {
             rank: idx % 8,
             file: idx / 8,
@@ -35,7 +35,6 @@ impl Square {
         let file_char = (b'a' + self.rank as u8) as char;
         format!("{}{}", file_char, self.file)
     }
-
 }
 
 impl Display for Square {

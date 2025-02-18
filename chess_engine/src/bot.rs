@@ -1,17 +1,21 @@
-use std::cmp::max;
+use std::{cmp::max, num::ParseIntError};
 
-use crate::{board::Board, game::Game, pieces::{Sides, ALL_PIECES, ALL_SIDES}};
+use crate::{
+    board::Board,
+    game::Game,
+    moves::Move,
+    pieces::{Sides, ALL_PIECES, ALL_SIDES},
+    tree::Node,
+};
 
-
-
-pub fn evaluate(board : &Board) -> i32 {
+pub fn evaluate(board: &Board) -> i32 {
     let mut value = 0;
 
     for side in ALL_SIDES {
         for piece in ALL_PIECES {
             let sign = match side {
                 Sides::White => 1,
-                Sides::Black => -1
+                Sides::Black => -1,
             };
 
             for i in 0..64 {
@@ -20,26 +24,28 @@ pub fn evaluate(board : &Board) -> i32 {
                 }
             }
         }
-    } 
+    }
 
     value
 }
 
 // Use the minimax algorithm to determine the best move
-pub fn minimax(board : &Board , mut depth : usize , maximizing : bool) -> i32 {
-    if depth == 0 {
-        return 0;
-    } 
+pub fn generate_tree(board: &Board, depth: usize, max_depth: usize, side: Sides) -> Vec<Box<Node>> {
+    let mvs = board.pseudo_legal_moves(side);
 
-    let side = if maximizing { Sides::White} else {Sides::Black};
+    let mut stuff = Vec::new();
+    for mv in mvs {
+        //println!("{}" , mv);
+        let mut new = board.clone();
+        mv.apply(&mut new);
 
-    let mut value = 0;
-    for mv in board.pseudo_legal_moves(side) {
-        let mut new_board = board.clone();
-        mv.apply(&mut new_board);
-
-        value += evaluate(&new_board) + minimax(&new_board, depth - 1, !maximizing);
+        let mut parent = Node::new(evaluate(&new), Some(mv));
+        if depth != max_depth {
+            let children = generate_tree(&new, depth + 1, max_depth, side.other());
+            parent.add(children);
+        }
+        stuff.push(Box::new(parent));
     }
 
-    return value;
+    return stuff;
 }

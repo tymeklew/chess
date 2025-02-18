@@ -1,15 +1,16 @@
 use crate::{board::Board, pieces::Pieces, square::Square};
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
-pub trait Move : Display {
-    fn apply(&self , board : &mut Board);
+pub trait Move: Display + Debug {
+    fn apply(&self, board: &mut Board);
     fn undo(&self) -> Box<dyn Move>;
     fn capture(&self) -> Option<Pieces>;
 }
 
+#[derive(Clone, Debug)]
 pub struct BasicMove {
-    from : Square,
-    to : Square,
+    from: Square,
+    to: Square,
 }
 impl Display for BasicMove {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -18,12 +19,14 @@ impl Display for BasicMove {
 }
 
 impl Move for BasicMove {
-    fn apply(&self , board : &mut Board) {
-        let from_side = board.get_side(self.from);
-        let to_side = board.get_side(self.to);
+    fn apply(&self, board: &mut Board) {
+        let side = board.get_side(self.from);
+        let piece = board.get_piece(self.from);
 
-        board.sides[from_side].0 ^= 1 << self.from.idx();
-        board.sides[from_side].0
+        board.sides[side].0 ^= 1 << self.from.idx();
+        board.sides[side].0 ^= 1 << self.from.idx();
+        board.pieces[side][piece].0 ^= 1 << self.from.idx();
+        board.pieces[side][piece].0 ^= 1 << self.to.idx();
     }
     fn undo(&self) -> Box<dyn Move> {
         todo!()
@@ -34,18 +37,16 @@ impl Move for BasicMove {
 }
 
 impl BasicMove {
-    pub fn new(from : Square , to : Square) -> Self {
-        BasicMove {
-            from,
-            to,
-        }
+    pub fn new(from: Square, to: Square) -> Self {
+        BasicMove { from, to }
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct Capture {
-    from : Square,
-    to : Square,
-    capture : Pieces,
+    from: Square,
+    to: Square,
+    capture: Pieces,
 }
 
 impl Display for Capture {
@@ -55,12 +56,17 @@ impl Display for Capture {
 }
 
 impl Move for Capture {
-    fn apply(&self , board : &mut Board) {
-        todo!()
+    fn apply(&self, board: &mut Board) {
+        BasicMove::new(self.from, self.to).apply(board);
+
+        let to_side = board.get_side(self.to);
+        let to_piece = board.get_piece(self.to);
+
+        board.sides[to_side].0 ^= 1 << self.from.idx();
     }
 
     fn undo(&self) -> Box<dyn Move> {
-       todo!() 
+        todo!()
     }
 
     fn capture(&self) -> Option<Pieces> {
@@ -69,11 +75,7 @@ impl Move for Capture {
 }
 
 impl Capture {
-    pub fn new(from : Square , to : Square , capture : Pieces) -> Self {
-        Capture {
-            from,
-            to,
-            capture,
-        }
+    pub fn new(from: Square, to: Square, capture: Pieces) -> Self {
+        Capture { from, to, capture }
     }
 }

@@ -1,17 +1,20 @@
-use std::{ops::{Index, IndexMut}, fmt::Display};
+use std::{
+    fmt::Display,
+    ops::{Index, IndexMut},
+};
 
 use crate::board::Bitboard;
 
 pub const SIDES_COUNT: usize = 2;
 pub const PIECES_COUNT: usize = 6;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Sides {
     White = 0,
     Black = 1,
 }
 
-pub const ALL_SIDES : [Sides ; 2] = [Sides::White , Sides::Black];
+pub const ALL_SIDES: [Sides; 2] = [Sides::White, Sides::Black];
 
 impl Sides {
     pub fn other(&self) -> Sides {
@@ -73,7 +76,6 @@ pub const ALL_PIECES: [Pieces; 6] = [
     Pieces::Queen,
     Pieces::King,
 ];
-
 
 impl Index<Sides> for [[Bitboard; PIECES_COUNT]; SIDES_COUNT] {
     type Output = [Bitboard; PIECES_COUNT];

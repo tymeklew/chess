@@ -2,22 +2,36 @@ mod attacks;
 mod board;
 mod bot;
 mod game;
-mod pieces;
 mod moves;
+mod pieces;
 mod square;
+mod tree;
 
 #[cfg(test)]
 mod tests {
-    use std::time::Instant;
+    use std::{i32, time::Instant};
 
-    use crate::{board::Board, bot, game::Game};
-
+    use crate::{
+        board::{self, Board},
+        bot::{self, generate_tree},
+        game::Game,
+        moves::{BasicMove, Move},
+        pieces::Sides,
+        square::Square,
+        tree::Node,
+    };
 
     #[test]
     fn it_works() {
         let board = Board::new();
 
-let x =         bot::minimax(&board, 1, true);
-println!("{}" , x);
+
+                let mut tree = generate_tree(&board, 0, 5, Sides::White);
+
+        let mut root = Node::new(i32::MAX, None);
+        root.add(tree);
+
+        println!("Finished started counting");
+        println!("{}", root.count());
     }
 }

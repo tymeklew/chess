@@ -8,22 +8,21 @@ use crate::square::Square;
 
 pub struct Game {
     turn: usize,
-    board : Board,
+    board: Board,
 }
 
 impl Game {
     pub fn new() -> Self {
         Game {
-            board : Board::default(),
+            board: Board::default(),
             turn: 0,
         }
     }
 
-    pub fn mv(&mut self , m : Box<dyn Move>) {
+    pub fn mv(&mut self, m: Box<dyn Move>) {
         m.apply(&mut self.board);
         self.turn += 1;
     }
 
     // Corrolates the position of the pieces on the board to the bitboard for attack
-   
 }

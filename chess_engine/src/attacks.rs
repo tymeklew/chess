@@ -64,15 +64,24 @@ pub fn step_attacks(square: usize, deltas: &[i8]) -> Bitboard {
     attacks
 }
 
+const PAWN_DELTA: usize = 8;
 pub fn pawn_moves(square: usize, side: Sides, occupied: Bitboard) -> Bitboard {
-    // Assume white for now
     let mut moves = Bitboard(0);
-    if (1 << (square + 8)) & occupied.0 == 0 {
-        moves |= Bitboard(1 << (square + 8));
+
+    let start_rank = if side == Sides::White { 1 } else { 6 };
+
+    if side == Sides::White {
+        moves ^= Bitboard(1 << (PAWN_DELTA + square));
+    } else {
+        moves ^= Bitboard((1 << square) >> PAWN_DELTA)
     }
 
-    if (1 << (square)) & (0b11111111 << (2 * 8)) == 0 {
-        moves |= Bitboard(1 << (square + 16));
+    if square / 8 == start_rank {
+        if side == Sides::White {
+            moves ^= Bitboard(1 << (PAWN_DELTA * 2 + square));
+        } else {
+            moves ^= Bitboard((1 << square) >> (PAWN_DELTA * 2))
+        }
     }
 
     moves

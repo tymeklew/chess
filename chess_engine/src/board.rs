@@ -1,9 +1,9 @@
-use std::fmt::Display;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 use crate::attacks::{pawn_moves, sliding_attacks, step_attacks};
 use crate::moves::{BasicMove, Capture, Move};
-use crate::pieces::{Pieces, Sides, ALL_PIECES, ALL_SIDES, PIECES_COUNT, SIDES_COUNT};
+use crate::pieces::{self, Pieces, Sides, ALL_PIECES, ALL_SIDES, PIECES_COUNT, SIDES_COUNT};
 use crate::square::Square;
+use std::fmt::Display;
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
 #[derive(Clone)]
 pub struct Board {
@@ -14,6 +14,27 @@ pub struct Board {
 impl Board {
     pub fn occupied(&self) -> Bitboard {
         self.sides[Sides::White] | self.sides[Sides::Black]
+    }
+    pub fn display(&self) {
+        let occupied = self.occupied();
+        for i in (0..64).rev() {
+            if occupied.0 & (1 << i) != 0 {
+                let side = self.get_side(Square::from_idx(i));
+                print!(
+                    "{}",
+                    match side {
+                        Sides::Black => "B",
+                        Sides::White => "W",
+                    }
+                )
+            } else {
+                print!(" ")
+            }
+
+            if i % 8 == 0 {
+                println!("");
+            }
+        }
     }
 
     pub fn empty(&self) -> Bitboard {
@@ -28,7 +49,19 @@ impl Board {
         self.sides[side]
     }
 
-    pub fn get_side(&self , pos : Square) -> Sides {
+    pub fn get_piece(&self, pos: Square) -> Pieces {
+        let side = self.get_side(pos);
+
+        for piece in ALL_PIECES {
+            if self.pieces[side][piece].0 & (1 << pos.idx()) != 0 {
+                return piece;
+            }
+        }
+
+        return Pieces::Pawn;
+    }
+
+    pub fn get_side(&self, pos: Square) -> Sides {
         let idx = pos.idx();
 
         for side in ALL_SIDES {
@@ -37,10 +70,10 @@ impl Board {
             }
         }
 
-        // Need to fix 
+        // Need to fix
         Sides::White
     }
-    
+
     pub fn new() -> Self {
         let mut board = Board::default();
 
@@ -69,22 +102,20 @@ impl Board {
             .iter()
             .fold(Bitboard(0), |acc, x| acc | *x);
 
-            board
-
+        board
     }
 
-
-
-     pub fn pseudo_legal_moves(&self, side_to_move: Sides) -> Vec<Box<dyn Move>> {
+    // Generates moves including pawn moves
+    pub fn pseudo_legal_moves(&self, side_to_move: Sides) -> Vec<Box<dyn Move>> {
         const ROOK_RAY_INDEX: [usize; 4] = [0, 1, 4, 5];
         const BISHOP_RAY_INDEX: [usize; 4] = [2, 3, 6, 7];
         const KNIGHT_DELTAS: [i8; 8] = [15, 17, 10, 6, -15, -17, -10, -6];
-        const BLACK_PAWN_DELTAS: [i8; 2] = [-7, -9];
         const KING_DELTAS: [i8; 8] = [1, -1, 8, -8, 7, -7, 9, -9];
         const WHITE_PAWN_DELTAS: [i8; 2] = [7, 9];
+        const BLACK_PAWN_DELTAS: [i8; 2] = [-7, -9];
 
         let occupied = self.occupied();
-        let mut moves : Vec<Box<dyn Move>> = Vec::new();
+        let mut moves: Vec<Box<dyn Move>> = Vec::new();
 
         for piece in ALL_PIECES {
             for i in 0..64 {
@@ -129,13 +160,11 @@ impl Board {
 
                 for j in 0..64 {
                     if captures.0 & (1 << j) != 0 {
-                        let captured_piece = ALL_PIECES.iter().find(|&&x| {
-                            self.pieces[side_to_move.other()][x].0 & (1 << j) != 0
-                        }).unwrap();
+                        let captured_piece = self.get_piece(Square::from_idx(i));
                         moves.push(Box::new(Capture::new(
                             Square::from_idx(i),
                             Square::from_idx(j),
-                            *captured_piece,
+                            captured_piece,
                         )));
                     }
                 }
@@ -143,15 +172,14 @@ impl Board {
         }
         moves
     }
-
 }
 
 impl Default for Board {
     fn default() -> Self {
-       Self {
+        Self {
             pieces: [[Bitboard(0); PIECES_COUNT]; SIDES_COUNT],
             sides: [Bitboard(0); SIDES_COUNT],
-       } 
+        }
     }
 }
 
