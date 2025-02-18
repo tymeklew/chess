@@ -1,5 +1,6 @@
 mod attacks;
 mod board;
+mod bot;
 mod game;
 mod pieces;
 mod moves;
@@ -9,18 +10,14 @@ mod square;
 mod tests {
     use std::time::Instant;
 
-    use crate::game::Game;
+    use crate::{board::Board, bot, game::Game};
 
 
     #[test]
     fn it_works() {
-        let game = Game::new();
-        let start = Instant::now();
-        let x =         game.pseudo_legal_moves(crate::pieces::Sides::White);
-        let diff = start.elapsed();
-        println!("Time taken: {:?}", diff);
-        for i in x {
-            println!("{}", i);
-        }
+        let board = Board::new();
+
+let x =         bot::minimax(&board, 1, true);
+println!("{}" , x);
     }
 }

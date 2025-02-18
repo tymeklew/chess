@@ -19,7 +19,11 @@ impl Display for BasicMove {
 
 impl Move for BasicMove {
     fn apply(&self , board : &mut Board) {
-        todo!()
+        let from_side = board.get_side(self.from);
+        let to_side = board.get_side(self.to);
+
+        board.sides[from_side].0 ^= 1 << self.from.idx();
+        board.sides[from_side].0
     }
     fn undo(&self) -> Box<dyn Move> {
         todo!()

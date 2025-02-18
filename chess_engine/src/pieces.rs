@@ -11,6 +11,8 @@ pub enum Sides {
     Black = 1,
 }
 
+pub const ALL_SIDES : [Sides ; 2] = [Sides::White , Sides::Black];
+
 impl Sides {
     pub fn other(&self) -> Sides {
         match self {
@@ -28,6 +30,25 @@ pub enum Pieces {
     Bishop = 3,
     Queen = 4,
     King = 5,
+}
+
+const RELATIVE_PAWN_STRENGTH: i32 = 10;
+const RELATIVE_KNIGHT_STRENGTH: i32 = 30;
+const RELATIVE_BISHOP_STRENGTH: i32 = 30;
+const RELATIVE_ROOK_STRENGTH: i32 = 50;
+const RELATIVE_QUEEN_STRENGTH: i32 = 90;
+const RELATIVE_KING_STRENGTH: i32 = 900;
+impl Pieces {
+    pub fn relative_strength(&self) -> i32 {
+        match self {
+            Self::Pawn => RELATIVE_PAWN_STRENGTH,
+            Self::Knight => RELATIVE_KNIGHT_STRENGTH,
+            Self::Bishop => RELATIVE_BISHOP_STRENGTH,
+            Self::Rook => RELATIVE_ROOK_STRENGTH,
+            Self::Queen => RELATIVE_QUEEN_STRENGTH,
+            Self::King => RELATIVE_KING_STRENGTH,
+        }
+    }
 }
 
 impl Display for Pieces {
@@ -52,6 +73,7 @@ pub const ALL_PIECES: [Pieces; 6] = [
     Pieces::Queen,
     Pieces::King,
 ];
+
 
 impl Index<Sides> for [[Bitboard; PIECES_COUNT]; SIDES_COUNT] {
     type Output = [Bitboard; PIECES_COUNT];
