@@ -1,27 +1,25 @@
-use std::collections::HashMap;
-
-use crate::attacks::{pawn_moves, sliding_attacks, step_attacks};
-use crate::board::{Bitboard, Board};
-use crate::moves::{BasicMove, Capture, Move};
-use crate::pieces::{Pieces, Sides, ALL_PIECES, PIECES_COUNT, SIDES_COUNT};
-use crate::square::Square;
-
-pub struct Game {
+use crate::board::Board;
+use crate::Move;
+pub struct ChessGame {
     turn: usize,
     board: Board,
 }
 
-impl Game {
+impl ChessGame {
     pub fn new() -> Self {
-        Game {
-            board: Board::default(),
+        ChessGame {
+            board: Board::new(),
             turn: 0,
         }
     }
 
-    pub fn mv(&mut self, m: Box<dyn Move>) {
+    pub fn mv(&mut self, m: &Box<dyn Move>) {
         m.apply(&mut self.board);
         self.turn += 1;
+    }
+
+    pub fn board(&self) -> &Board {
+        &self.board
     }
 
     // Corrolates the position of the pieces on the board to the bitboard for attack

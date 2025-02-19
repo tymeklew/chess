@@ -1,8 +1,7 @@
-use std::{cmp::max, i32, num::ParseIntError};
+use std::{i32, process::ExitStatus};
 
 use crate::{
     board::Board,
-    game::Game,
     moves::Move,
     pieces::{Sides, ALL_PIECES, ALL_SIDES},
 };
@@ -28,47 +27,57 @@ pub fn evaluate(board: &Board) -> i32 {
     value
 }
 
-pub fn mv(board : &Board , depth : usize , side : Sides) -> (i32 , Option<Box<dyn Move>>) {
+pub fn bot_move(board : &Board , depth : usize , side : Sides) -> (i32 , Option<Box<dyn Move>>) {
     match side {
-        Sides::White => maxi(board, depth, side),
-        Sides::Black => mini(board, depth, side)
+        Sides::White => maxi(board, depth, side , i32::MIN , i32::MAX),
+        Sides::Black => mini(board, depth, side , i32::MIN , i32::MAX)
     }
 } 
 
-pub fn maxi(board: &Board , depth : usize , side : Sides) -> (i32 , Option<Box<dyn Move>>) {
+pub fn maxi(board: &Board , depth : usize , side : Sides , mut alpha : i32 , beta : i32) -> (i32 , Option<Box<dyn Move>>) {
     if depth == 0 { return (evaluate(board) , None) };
 
     let mut max = i32::MIN;
-    let mut yap = None;
-    for mv in board.pseudo_legal_moves(side) {
+    let mut best_move = None;
+    for mv in board.legal_moves(side) {
         let mut new = board.clone();
         mv.apply(&mut new);
-        let (score , _) = mini(&new, depth - 1, side.other());
+        let (score , _) = mini(&new, depth - 1, side.other() , alpha , beta);
 
 
         if score > max {
             max = score;
-            yap = Some(mv);
+            best_move = Some(mv);
+        }
+
+        alpha = alpha.max(score);
+        if beta <= alpha {
+            break;
         }
     }
 
-    return (max , yap);
+    return (max , best_move);
 }
-pub fn mini(board: &Board , depth : usize , side : Sides) -> (i32 , Option<Box<dyn Move>>) {
+pub fn mini(board: &Board , depth : usize , side : Sides , alpha : i32 ,mut beta : i32) -> (i32 , Option<Box<dyn Move>>) {
     if depth == 0 { return (evaluate(board) , None) };
 
     let mut min = i32::MAX;
-    let mut yap = None;
-    for mv in board.pseudo_legal_moves(side) {
+    let mut best_move = None;
+    for mv in board.legal_moves(side) {
         let mut new = board.clone();
         mv.apply(&mut new);
-        let (score , _) = maxi(&new, depth - 1, side.other());
+        let (score , _) = maxi(&new, depth - 1, side.other()  , alpha , beta);
 
         if score < min {
             min = score;
-            yap = Some(mv);
+            best_move = Some(mv);
+        }
+
+        beta = beta.min(score);
+        if beta <= alpha {
+            break;
         }
     }
 
-    return (min , yap);
+    return (min ,best_move);
 }

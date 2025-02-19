@@ -22,9 +22,24 @@ impl Board {
            for j in 0..8 {
                 let idx = i * 8 + j;
                 if Bitboard(1 << idx) & occupied != Bitboard(0) {
+                    let piece = self.get_piece(Square::from_idx(idx));
                     print!("{}" , match self.get_side(Square::from_idx(idx)) {
-                        Sides::Black => "B",
-                        Sides::White => "W"
+                        Sides::Black => match piece {
+                            Pieces::Pawn => "♟",
+                            Pieces::Rook => "♜",
+                            Pieces::Knight => "♞",
+                            Pieces::Bishop => "♝",
+                            Pieces::Queen => "♛",
+                            Pieces::King => "♚",
+                        },
+                        Sides::White => match piece {
+                            Pieces::Pawn => "♙",
+                            Pieces::Rook => "♖",
+                            Pieces::Knight => "♘",
+                            Pieces::Bishop => "♗",
+                            Pieces::Queen => "♕",
+                            Pieces::King => "♔",
+                        }
                     });
                     continue;
                 }
@@ -71,6 +86,19 @@ impl Board {
         Sides::White
     }
 
+    pub fn is_check(&self , side : Sides) -> bool {
+        let mvs = self.pseudo_legal_moves(side.other());
+
+        mvs.iter().any(|f| match f.capture() {
+            Some(Pieces::King) => true,
+            _ => false,
+        })
+    }
+
+    pub fn is_checkmate(&self , side : Sides) -> bool {
+        self.is_check(side) && self.legal_moves(side).is_empty()
+    }
+
     pub fn new() -> Self {
         let mut board = Board::default();
 
@@ -102,8 +130,16 @@ impl Board {
         board
     }
 
+    pub fn legal_moves(&self , side_to_move: Sides) -> Vec<Box<dyn Move>> {
+        self.pseudo_legal_moves(side_to_move).into_iter().filter(|f| {
+            let mut new = self.clone();
+            f.apply(&mut new);
+            !new.is_check(side_to_move)
+        }).collect()
+    }
+
     // Generates moves including pawn moves
-    pub fn pseudo_legal_moves(&self, side_to_move: Sides) -> Vec<Box<dyn Move>> {
+    fn pseudo_legal_moves(&self, side_to_move: Sides) -> Vec<Box<dyn Move>> {
         const ROOK_RAY_INDEX: [usize; 4] = [0, 1, 4, 5];
         const BISHOP_RAY_INDEX: [usize; 4] = [2, 3, 6, 7];
         const KNIGHT_DELTAS: [i8; 8] = [15, 17, 10, 6, -15, -17, -10, -6];

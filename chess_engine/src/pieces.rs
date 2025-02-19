@@ -14,7 +14,7 @@ pub enum Sides {
     Black = 1,
 }
 
-pub const ALL_SIDES: [Sides; 2] = [Sides::White, Sides::Black];
+pub const ALL_SIDES: [Sides; 2] = [Sides::Black, Sides::White];
 
 impl Sides {
     pub fn other(&self) -> Sides {
