@@ -3,47 +3,53 @@ use std::{i32, process::ExitStatus};
 use crate::{
     board::Board,
     moves::Move,
-    pieces::{Sides, ALL_PIECES, ALL_SIDES},
+    pieces::{Pieces, Sides, ALL_PIECES, ALL_SIDES},
 };
 
-pub fn evaluate(board: &Board) -> i32 {
-    let mut value = 0;
+pub fn evaluate(board: &Board, side: Sides) -> i32 {
+    let sign = match side {
+        Sides::White => 1,
+        Sides::Black => -1,
+    };
 
-    for side in ALL_SIDES {
-        for piece in ALL_PIECES {
-            let sign = match side {
-                Sides::White => 1,
-                Sides::Black => -1,
-            };
-
-
-            for i in 0..64 {
-                if board.pieces[side][piece].0 & (1 << i) != 0 {
-                    value += sign * piece.relative_strength();
-                }
-            }
-        }
-    }
-    value
+    // Claude Shannon's evaluation function
+    sign * (200
+        * (board.count_piece(Sides::White, Pieces::King)
+            - board.count_piece(Sides::Black, Pieces::King))
+        + 9 * (board.count_piece(Sides::White, Pieces::Queen)
+            - board.count_piece(Sides::Black, Pieces::Queen))
+        + 5 * (board.count_piece(Sides::White, Pieces::Rook)
+            - board.count_piece(Sides::Black, Pieces::Rook)
+            + board.count_piece(Sides::White, Pieces::Knight)
+            - board.count_piece(Sides::Black, Pieces::Knight))
+        + 3 * (board.count_piece(Sides::White, Pieces::Bishop)
+            - board.count_piece(Sides::Black, Pieces::Bishop)))
 }
 
-pub fn bot_move(board : &Board , depth : usize , side : Sides) -> (i32 , Option<Box<dyn Move>>) {
+pub fn bot_move(board: &Board, depth: usize, side: Sides) -> (i32, Option<Box<dyn Move>>) {
     match side {
-        Sides::White => maxi(board, depth, side , i32::MIN , i32::MAX),
-        Sides::Black => mini(board, depth, side , i32::MIN , i32::MAX)
+        Sides::White => maxi(board, depth, side, i32::MIN, i32::MAX),
+        Sides::Black => mini(board, depth, side, i32::MIN, i32::MAX),
     }
-} 
+}
 
-pub fn maxi(board: &Board , depth : usize , side : Sides , mut alpha : i32 , beta : i32) -> (i32 , Option<Box<dyn Move>>) {
-    if depth == 0 { return (evaluate(board) , None) };
+pub fn maxi(
+    board: &Board,
+    depth: usize,
+    side: Sides,
+    mut alpha: i32,
+    beta: i32,
+) -> (i32, Option<Box<dyn Move>>) {
+    if depth == 0 {
+        return (evaluate(board, side), None);
+    };
 
     let mut max = i32::MIN;
     let mut best_move = None;
     for mv in board.legal_moves(side) {
         let mut new = board.clone();
         mv.apply(&mut new);
-        let (score , _) = mini(&new, depth - 1, side.other() , alpha , beta);
-
+        let (score, _) = mini(&new, depth - 1, side.other(), alpha, beta);
 
         if score > max {
             max = score;
@@ -56,17 +62,25 @@ pub fn maxi(board: &Board , depth : usize , side : Sides , mut alpha : i32 , bet
         }
     }
 
-    return (max , best_move);
+    return (max, best_move);
 }
-pub fn mini(board: &Board , depth : usize , side : Sides , alpha : i32 ,mut beta : i32) -> (i32 , Option<Box<dyn Move>>) {
-    if depth == 0 { return (evaluate(board) , None) };
+pub fn mini(
+    board: &Board,
+    depth: usize,
+    side: Sides,
+    alpha: i32,
+    mut beta: i32,
+) -> (i32, Option<Box<dyn Move>>) {
+    if depth == 0 {
+        return (evaluate(board, side), None);
+    };
 
     let mut min = i32::MAX;
     let mut best_move = None;
     for mv in board.legal_moves(side) {
         let mut new = board.clone();
         mv.apply(&mut new);
-        let (score , _) = maxi(&new, depth - 1, side.other()  , alpha , beta);
+        let (score, _) = maxi(&new, depth - 1, side.other(), alpha, beta);
 
         if score < min {
             min = score;
@@ -79,5 +93,5 @@ pub fn mini(board: &Board , depth : usize , side : Sides , alpha : i32 ,mut beta
         }
     }
 
-    return (min ,best_move);
+    return (min, best_move);
 }

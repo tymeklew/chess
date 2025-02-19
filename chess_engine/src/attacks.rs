@@ -59,7 +59,7 @@ pub fn step_attacks(square: usize, deltas: &[i8]) -> Bitboard {
     for delta in deltas {
         let next = square as i8 + *delta as i8;
 
-        let file_diff = ((square as i8) & 0x7) - (next & 0x7);        
+        let file_diff = ((square as i8) & 0x7) - (next & 0x7);
         if next >= 0 && next < 64 && file_diff.abs() <= 1 {
             attacks |= Bitboard(1 << next);
         }
@@ -73,10 +73,9 @@ pub fn pawn_moves(square: usize, side: Sides, occupied: Bitboard) -> Bitboard {
 
     let start_rank = if side == Sides::White { 1 } else { 6 };
 
-
-    if side == Sides::White && (PAWN_DELTA + square) % 8 < 7{
+    if side == Sides::White && ((PAWN_DELTA as i8) + (square as i8)) < 64 {
         moves ^= Bitboard(1 << (PAWN_DELTA + square));
-    } else if side == Sides::Black && square - PAWN_DELTA % 7 > 0 {
+    } else if side == Sides::Black && (square as i8 - PAWN_DELTA as i8) > 0 {
         moves ^= Bitboard((1 << square) >> PAWN_DELTA)
     }
 

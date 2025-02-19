@@ -1,7 +1,8 @@
 use crate::board::Board;
-use crate::Move;
+use crate::pieces::Pieces;
+use crate::{Move, Sides, Square};
 pub struct ChessGame {
-    turn: usize,
+    turn: Sides,
     board: Board,
 }
 
@@ -9,18 +10,22 @@ impl ChessGame {
     pub fn new() -> Self {
         ChessGame {
             board: Board::new(),
-            turn: 0,
+            turn: Sides::White,
         }
     }
 
-    pub fn mv(&mut self, m: &Box<dyn Move>) {
+    pub fn mv<T>(&mut self, m: &T) where T : Move {
         m.apply(&mut self.board);
-        self.turn += 1;
+        self.turn = self.turn.other();
+    }
+
+    pub fn boxed_mv(&mut self, m: Box<dyn Move>) {
+        m.apply(&mut self.board);
+        self.turn = self.turn.other();
     }
 
     pub fn board(&self) -> &Board {
         &self.board
     }
 
-    // Corrolates the position of the pieces on the board to the bitboard for attack
 }

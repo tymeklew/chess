@@ -25,7 +25,7 @@ impl Sides {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Pieces {
     Pawn = 0,
     Rook = 1,

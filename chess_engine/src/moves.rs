@@ -1,7 +1,14 @@
-use crate::{board::{Bitboard, Board}, pieces::{self, Pieces, Sides}, square::Square};
-use std::{fmt::{Debug, Display}, ops::BitAnd};
+use crate::{
+    board::{Bitboard, Board},
+    pieces::{self, Pieces, Sides},
+    square::Square,
+};
+use std::{
+    fmt::{Debug, Display},
+    ops::BitAnd,
+};
 
-pub trait Move: Display + Debug  {
+pub trait Move: Display + Debug {
     fn apply(&self, board: &mut Board);
     fn undo(&self) -> Box<dyn Move>;
     fn capture(&self) -> Option<Pieces>;
@@ -23,11 +30,10 @@ impl Move for BasicMove {
         let side = board.get_side(self.from);
         let piece = board.get_piece(self.from);
 
-        board.sides[side].0 ^= 1 << self.from.idx(); // Remove piece from the source square
-        board.sides[side].0 ^= 1 << self.to.idx();   // Add piece to the destination square
-        
-        board.pieces[side][piece].0 ^= 1 << self.from.idx(); // Remove from piece-specific bitboard
-        board.pieces[side][piece].0 ^= 1 << self.to.idx();   // Add to piece-specific bitboard
+        board.place_piece(side, piece, self.to);
+
+        board.sides[side].0 ^= 1 << self.from.idx(); // Remove from piece-specific bitboard
+        board.pieces[side][piece].0 ^= 1 << self.from.idx(); // Add to piece-specific bitboard
     }
     fn undo(&self) -> Box<dyn Move> {
         todo!()
@@ -63,7 +69,7 @@ impl Move for Capture {
 
         board.sides[capture_side] ^= Bitboard(1 << self.to.idx());
         board.pieces[capture_side][capture_piece] ^= Bitboard(1 << self.to.idx());
-        
+
         BasicMove::new(self.from, self.to).apply(board);
     }
 
@@ -79,5 +85,82 @@ impl Move for Capture {
 impl Capture {
     pub fn new(from: Square, to: Square, capture: Pieces) -> Self {
         Capture { from, to, capture }
+    }
+}
+
+#[derive(Debug)]
+pub struct Promotion {
+    from: Square,
+    to: Square,
+    piece: Pieces,
+}
+
+impl Promotion {
+    pub fn new(from: Square, to: Square, piece: Pieces) -> Self {
+        Promotion { from, to, piece }
+    }
+}
+
+impl Display for Promotion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} -> {} promoting to {}",
+            self.from, self.to, self.piece
+        )
+    }
+}
+
+impl Move for Promotion {
+    fn apply(&self, board: &mut Board) {
+        let side = board.get_side(self.to);
+
+        board.sides[side] ^= Bitboard(1 << self.to.idx());
+        board.pieces[side][self.piece] ^= Bitboard(1 << self.to.idx());
+
+        board.sides[side] ^= Bitboard(1 << self.from.idx());
+        board.pieces[side][pieces::Pieces::Pawn] ^= Bitboard(1 << self.from.idx());
+    }
+
+    fn undo(&self) -> Box<dyn Move> {
+        todo!()
+    }
+
+    fn capture(&self) -> Option<Pieces> {
+        None
+    }
+}
+
+#[derive(Debug)]
+pub struct Castle {
+    side: Sides,
+    king_side: bool,
+}
+
+impl Castle {
+    pub fn new(side: Sides, king_side: bool) -> Self {
+        Castle { side, king_side }
+    }
+}
+
+impl Display for Castle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Castle {} side",
+            if self.king_side { "king" } else { "queen" }
+        )
+    }
+}
+
+impl Move for Castle {
+    fn apply(&self, board: &mut Board) {}
+
+    fn capture(&self) -> Option<Pieces> {
+        None
+    }
+
+    fn undo(&self) -> Box<dyn Move> {
+        todo!()
     }
 }

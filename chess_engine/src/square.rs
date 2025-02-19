@@ -3,14 +3,14 @@ use std::fmt::Display;
 #[derive(Debug, Clone, Copy)]
 pub struct Square {
     // Horizontal
-    pub rank: usize,
-    // Vertical
     pub file: usize,
+    // Vertical
+    pub rank: usize,
 }
 
 impl Square {
-    pub fn new(rank: usize, file: usize) -> Square {
-        Square { rank, file }
+    pub fn new(file: usize, rank: usize) -> Square {
+        Square { file, rank }
     }
 
     pub fn rank(&self) -> usize {
@@ -22,24 +22,24 @@ impl Square {
 
     pub fn from_idx(idx: usize) -> Square {
         Square {
-            rank: idx % 8,
-            file: idx / 8,
+            file: idx % 8,
+            rank: idx / 8,
         }
     }
 
     pub fn idx(&self) -> usize {
-        self.file * 8 + self.rank
+        self.rank * 8 + self.file
     }
 
     pub fn to_algebraic(&self) -> String {
-        let file_char = (b'a' + self.rank as u8) as char;
-        format!("{}{}", file_char, self.file)
+        let file_char = (b'a' + self.file as u8) as char;
+        format!("{}{}", file_char, self.rank)
     }
 }
 
 impl Display for Square {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", (b'a' + self.rank as u8) as char, self.file + 1)
+        write!(f, "{}{}", (b'a' + self.file as u8) as char, self.rank + 1)
     }
 }
 
