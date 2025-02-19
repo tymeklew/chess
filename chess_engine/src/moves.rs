@@ -1,7 +1,7 @@
-use crate::{board::Board, pieces::Pieces, square::Square};
-use std::fmt::{Debug, Display};
+use crate::{board::{Bitboard, Board}, pieces::{self, Pieces, Sides}, square::Square};
+use std::{fmt::{Debug, Display}, ops::BitAnd};
 
-pub trait Move: Display + Debug {
+pub trait Move: Display + Debug  {
     fn apply(&self, board: &mut Board);
     fn undo(&self) -> Box<dyn Move>;
     fn capture(&self) -> Option<Pieces>;
@@ -23,10 +23,11 @@ impl Move for BasicMove {
         let side = board.get_side(self.from);
         let piece = board.get_piece(self.from);
 
-        board.sides[side].0 ^= 1 << self.from.idx();
-        board.sides[side].0 ^= 1 << self.from.idx();
-        board.pieces[side][piece].0 ^= 1 << self.from.idx();
-        board.pieces[side][piece].0 ^= 1 << self.to.idx();
+        board.sides[side].0 ^= 1 << self.from.idx(); // Remove piece from the source square
+        board.sides[side].0 ^= 1 << self.to.idx();   // Add piece to the destination square
+        
+        board.pieces[side][piece].0 ^= 1 << self.from.idx(); // Remove from piece-specific bitboard
+        board.pieces[side][piece].0 ^= 1 << self.to.idx();   // Add to piece-specific bitboard
     }
     fn undo(&self) -> Box<dyn Move> {
         todo!()
@@ -57,12 +58,13 @@ impl Display for Capture {
 
 impl Move for Capture {
     fn apply(&self, board: &mut Board) {
+        let capture_side = board.get_side(self.to);
+        let capture_piece = board.get_piece(self.to);
+
+        board.sides[capture_side] ^= Bitboard(1 << self.to.idx());
+        board.pieces[capture_side][capture_piece] ^= Bitboard(1 << self.to.idx());
+        
         BasicMove::new(self.from, self.to).apply(board);
-
-        let to_side = board.get_side(self.to);
-        let to_piece = board.get_piece(self.to);
-
-        board.sides[to_side].0 ^= 1 << self.from.idx();
     }
 
     fn undo(&self) -> Box<dyn Move> {

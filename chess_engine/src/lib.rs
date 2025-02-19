@@ -7,31 +7,21 @@ mod pieces;
 mod square;
 mod tree;
 
+pub use bot::mv;
+pub use moves::Move;
+pub use moves::{BasicMove , Capture};
+pub use square::Square;
+
 #[cfg(test)]
 mod tests {
-    use std::{i32, time::Instant};
+    use std::{i32, io::Read, time::Instant};
 
     use crate::{
-        board::{self, Board},
-        bot::{self, generate_tree},
-        game::Game,
-        moves::{BasicMove, Move},
-        pieces::Sides,
-        square::Square,
-        tree::Node,
+        board::{self, Bitboard, Board}, bot::{self, evaluate, maxi, mini}, game::Game, moves::{BasicMove, Move}, pieces::Sides, square::Square
     };
 
     #[test]
     fn it_works() {
-        let board = Board::new();
-
-
-                let mut tree = generate_tree(&board, 0, 5, Sides::White);
-
-        let mut root = Node::new(i32::MAX, None);
-        root.add(tree);
-
-        println!("Finished started counting");
-        println!("{}", root.count());
+        
     }
 }

@@ -1,11 +1,10 @@
-use std::{cmp::max, num::ParseIntError};
+use std::{cmp::max, i32, num::ParseIntError};
 
 use crate::{
     board::Board,
     game::Game,
     moves::Move,
     pieces::{Sides, ALL_PIECES, ALL_SIDES},
-    tree::Node,
 };
 
 pub fn evaluate(board: &Board) -> i32 {
@@ -18,6 +17,7 @@ pub fn evaluate(board: &Board) -> i32 {
                 Sides::Black => -1,
             };
 
+
             for i in 0..64 {
                 if board.pieces[side][piece].0 & (1 << i) != 0 {
                     value += sign * piece.relative_strength();
@@ -25,27 +25,50 @@ pub fn evaluate(board: &Board) -> i32 {
             }
         }
     }
-
     value
 }
 
-// Use the minimax algorithm to determine the best move
-pub fn generate_tree(board: &Board, depth: usize, max_depth: usize, side: Sides) -> Vec<Box<Node>> {
-    let mvs = board.pseudo_legal_moves(side);
+pub fn mv(board : &Board , depth : usize , side : Sides) -> (i32 , Option<Box<dyn Move>>) {
+    match side {
+        Sides::White => maxi(board, depth, side),
+        Sides::Black => mini(board, depth, side)
+    }
+} 
 
-    let mut stuff = Vec::new();
-    for mv in mvs {
-        //println!("{}" , mv);
+pub fn maxi(board: &Board , depth : usize , side : Sides) -> (i32 , Option<Box<dyn Move>>) {
+    if depth == 0 { return (evaluate(board) , None) };
+
+    let mut max = i32::MIN;
+    let mut yap = None;
+    for mv in board.pseudo_legal_moves(side) {
         let mut new = board.clone();
         mv.apply(&mut new);
+        let (score , _) = mini(&new, depth - 1, side.other());
 
-        let mut parent = Node::new(evaluate(&new), Some(mv));
-        if depth != max_depth {
-            let children = generate_tree(&new, depth + 1, max_depth, side.other());
-            parent.add(children);
+
+        if score > max {
+            max = score;
+            yap = Some(mv);
         }
-        stuff.push(Box::new(parent));
     }
 
-    return stuff;
+    return (max , yap);
+}
+pub fn mini(board: &Board , depth : usize , side : Sides) -> (i32 , Option<Box<dyn Move>>) {
+    if depth == 0 { return (evaluate(board) , None) };
+
+    let mut min = i32::MAX;
+    let mut yap = None;
+    for mv in board.pseudo_legal_moves(side) {
+        let mut new = board.clone();
+        mv.apply(&mut new);
+        let (score , _) = maxi(&new, depth - 1, side.other());
+
+        if score < min {
+            min = score;
+            yap = Some(mv);
+        }
+    }
+
+    return (min , yap);
 }

@@ -52,12 +52,15 @@ pub fn sliding_attacks(square: usize, occupied: Bitboard, ray_indecies: &[usize]
     attacks
 }
 
+// Add columm diff checking
 pub fn step_attacks(square: usize, deltas: &[i8]) -> Bitboard {
     let mut attacks = Bitboard(0);
 
     for delta in deltas {
         let next = square as i8 + *delta as i8;
-        if next >= 0 && next < 64 {
+
+        let file_diff = ((square as i8) & 0x7) - (next & 0x7);        
+        if next >= 0 && next < 64 && file_diff.abs() <= 1 {
             attacks |= Bitboard(1 << next);
         }
     }
@@ -70,9 +73,10 @@ pub fn pawn_moves(square: usize, side: Sides, occupied: Bitboard) -> Bitboard {
 
     let start_rank = if side == Sides::White { 1 } else { 6 };
 
-    if side == Sides::White {
+
+    if side == Sides::White && (PAWN_DELTA + square) % 8 < 7{
         moves ^= Bitboard(1 << (PAWN_DELTA + square));
-    } else {
+    } else if side == Sides::Black && square - PAWN_DELTA % 7 > 0 {
         moves ^= Bitboard((1 << square) >> PAWN_DELTA)
     }
 

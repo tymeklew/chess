@@ -1,4 +1,4 @@
-use crate::moves::Move;
+/*use crate::moves::Move;
 
 pub struct Node {
     children: Vec<Box<Node>>,
@@ -11,6 +11,10 @@ impl Node {
             children: Vec::new(),
             value: (val, mv),
         }
+    }
+
+    pub fn get_current_move(&self) -> Option<Box<dyn Move>> {
+        self.value.1.as_ref()
     }
 
     pub fn insert(&mut self, val: i32, mv: Option<Box<dyn Move>>) {
@@ -42,21 +46,6 @@ impl Node {
         return sum;
     }
 
-    pub fn breadth_first_search(&self, maximize: bool) -> (i32, Box<dyn Move>) {
-        if self.children.is_empty() {
-            //return self.value;
-        }
-
-        let values = self
-            .children
-            .iter()
-            .map(|f| f.breadth_first_search(!maximize));
-        if maximize {
-            return values.max_by_key(|x| x.0).unwrap();
-        } else {
-            values.min_by_key(|x| x.0).unwrap()
-        }
-    }
     pub fn display_recursive(&self, indent: usize, depth: usize) {
         // Indent to represent depth in the tree
         println!(
@@ -77,3 +66,4 @@ impl Node {
         }
     }
 }
+*/

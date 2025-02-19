@@ -2,6 +2,7 @@ use crate::attacks::{pawn_moves, sliding_attacks, step_attacks};
 use crate::moves::{BasicMove, Capture, Move};
 use crate::pieces::{self, Pieces, Sides, ALL_PIECES, ALL_SIDES, PIECES_COUNT, SIDES_COUNT};
 use crate::square::Square;
+use core::panic;
 use std::fmt::Display;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
@@ -17,23 +18,19 @@ impl Board {
     }
     pub fn display(&self) {
         let occupied = self.occupied();
-        for i in (0..64).rev() {
-            if occupied.0 & (1 << i) != 0 {
-                let side = self.get_side(Square::from_idx(i));
-                print!(
-                    "{}",
-                    match side {
+        for i in (0..8).rev() {
+           for j in 0..8 {
+                let idx = i * 8 + j;
+                if Bitboard(1 << idx) & occupied != Bitboard(0) {
+                    print!("{}" , match self.get_side(Square::from_idx(idx)) {
                         Sides::Black => "B",
-                        Sides::White => "W",
-                    }
-                )
-            } else {
-                print!(" ")
-            }
-
-            if i % 8 == 0 {
-                println!("");
-            }
+                        Sides::White => "W"
+                    });
+                    continue;
+                }
+                print!(" ");
+           } 
+            println!(); 
         }
     }
 
@@ -130,7 +127,7 @@ impl Board {
                             Sides::Black => step_attacks(i, &BLACK_PAWN_DELTAS),
                             Sides::White => step_attacks(i, &WHITE_PAWN_DELTAS),
                         };
-                        bb & self.enemy(side_to_move) | pawn_moves(i, side_to_move, occupied)
+                        bb & self.enemy(side_to_move) | (pawn_moves(i, side_to_move, occupied) & !self.occupied())
                     }
                     Pieces::Rook => sliding_attacks(i, occupied, &ROOK_RAY_INDEX),
                     Pieces::Knight => step_attacks(i, &KNIGHT_DELTAS),
@@ -160,7 +157,7 @@ impl Board {
 
                 for j in 0..64 {
                     if captures.0 & (1 << j) != 0 {
-                        let captured_piece = self.get_piece(Square::from_idx(i));
+                        let captured_piece = self.get_piece(Square::from_idx(j));
                         moves.push(Box::new(Capture::new(
                             Square::from_idx(i),
                             Square::from_idx(j),
@@ -172,6 +169,42 @@ impl Board {
         }
         moves
     }
+
+    pub fn from_fen(input : String) -> Board {
+        let mut board = Board::default();
+        let parts  : Vec<&str> = input.split(" ").collect();
+
+        // Handle placment
+        let placement = parts.get(0).unwrap();
+        for (i , row) in placement.split("/").enumerate() {
+            let mut index = (7 - i) * 8;
+            for chr in row.chars() {
+                if chr.is_numeric() {
+                    index += chr.to_digit(10).unwrap() as usize;
+                    continue;
+                }
+
+                let side = if chr.is_uppercase() {  Sides::White } else { Sides::Black };
+                let piece = match chr.to_ascii_lowercase() {
+                    'p' => Pieces::Pawn,
+                    'r' => Pieces::Rook,
+                    'n' => Pieces::Knight,
+                    'b' => Pieces::Bishop,
+                    'q' => Pieces::Queen,
+                    'k' => Pieces::King,
+                    _ => panic!("Yappadoodledo")
+                };
+
+                board.sides[side] ^= Bitboard(1 << index);
+                board.pieces[side][piece] ^= Bitboard(1 << index);
+                index += 1;
+            }
+        }
+
+
+        board
+    }
+
 }
 
 impl Default for Board {
