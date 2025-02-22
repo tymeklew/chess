@@ -27,14 +27,15 @@ pub fn evaluate(board: &Board, side: Sides) -> i32 {
 }
 
 pub fn bot_move(board: &Board, depth: usize, side: Sides) -> (i32, Option<Box<dyn Move>>) {
+    let mut board = board.clone();
     match side {
-        Sides::White => maxi(board, depth, side, i32::MIN, i32::MAX),
-        Sides::Black => mini(board, depth, side, i32::MIN, i32::MAX),
+        Sides::White => maxi(&mut board, depth, side, i32::MIN, i32::MAX),
+        Sides::Black => mini(&mut board, depth, side, i32::MIN, i32::MAX),
     }
 }
 
 pub fn maxi(
-    board: &Board,
+    board: &mut Board,
     depth: usize,
     side: Sides,
     mut alpha: i32,
@@ -47,9 +48,9 @@ pub fn maxi(
     let mut max = i32::MIN;
     let mut best_move = None;
     for mv in board.legal_moves(side) {
-        let mut new = board.clone();
-        mv.apply(&mut new);
-        let (score, _) = mini(&new, depth - 1, side.other(), alpha, beta);
+        mv.apply(board);
+        let (score, _) = mini(board, depth - 1, side.other(), alpha, beta);
+        mv.undo(board);
 
         if score > max {
             max = score;
@@ -65,7 +66,7 @@ pub fn maxi(
     return (max, best_move);
 }
 pub fn mini(
-    board: &Board,
+    mut board: &mut Board,
     depth: usize,
     side: Sides,
     alpha: i32,
@@ -78,9 +79,10 @@ pub fn mini(
     let mut min = i32::MAX;
     let mut best_move = None;
     for mv in board.legal_moves(side) {
-        let mut new = board.clone();
-        mv.apply(&mut new);
-        let (score, _) = maxi(&new, depth - 1, side.other(), alpha, beta);
+        mv.apply(&mut board);
+        let (score, _) = maxi(board, depth - 1, side.other(), alpha, beta);
+        // UNDO not tested yet if issues occur check here
+        mv.undo(&mut board);
 
         if score < min {
             min = score;

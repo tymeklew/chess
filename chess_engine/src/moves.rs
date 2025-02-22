@@ -1,5 +1,5 @@
 use crate::{
-    board::{Bitboard, Board},
+    board::{self, Bitboard, Board},
     pieces::{self, Pieces, Sides},
     square::Square,
 };
@@ -10,7 +10,7 @@ use std::{
 
 pub trait Move: Display + Debug {
     fn apply(&self, board: &mut Board);
-    fn undo(&self) -> Box<dyn Move>;
+    fn undo(&self , board : &mut Board);
     fn capture(&self) -> Option<Pieces>;
 }
 
@@ -35,8 +35,14 @@ impl Move for BasicMove {
         board.sides[side].0 ^= 1 << self.from.idx(); // Remove from piece-specific bitboard
         board.pieces[side][piece].0 ^= 1 << self.from.idx(); // Add to piece-specific bitboard
     }
-    fn undo(&self) -> Box<dyn Move> {
-        todo!()
+    fn undo(&self , board : &mut Board) {
+        let side = board.get_side(self.to);
+        let piece = board.get_piece(self.to);
+
+        board.place_piece(side, piece, self.from);
+
+        board.sides[side].0 ^= 1 << self.to.idx();
+        board.pieces[side][piece].0 ^= 1 << self.to.idx();
     }
     fn capture(&self) -> Option<Pieces> {
         None
@@ -73,8 +79,15 @@ impl Move for Capture {
         BasicMove::new(self.from, self.to).apply(board);
     }
 
-    fn undo(&self) -> Box<dyn Move> {
-        todo!()
+    fn undo(&self , board: &mut Board) {
+        let mv = BasicMove::new(self.from, self.to);
+        mv.undo(board);
+
+        let capture_side = board.get_side(self.to);
+        let capture_piece = board.get_piece(self.to);
+
+        board.sides[capture_side] ^= Bitboard(1 << self.to.idx());
+        board.pieces[capture_side][capture_piece] ^= Bitboard(1 << self.to.idx());
     }
 
     fn capture(&self) -> Option<Pieces> {
@@ -122,7 +135,7 @@ impl Move for Promotion {
         board.pieces[side][pieces::Pieces::Pawn] ^= Bitboard(1 << self.from.idx());
     }
 
-    fn undo(&self) -> Box<dyn Move> {
+    fn undo(&self , board: &mut Board)  {
         todo!()
     }
 
@@ -160,7 +173,7 @@ impl Move for Castle {
         None
     }
 
-    fn undo(&self) -> Box<dyn Move> {
+    fn undo(&self , board: &mut Board){
         todo!()
     }
 }

@@ -230,14 +230,15 @@ impl Board {
 
                 for j in 0..64 {
                     if basic_moves.0 & (1 << j) != 0 {
-                        if piece != Pieces::Pawn {
+                        //if piece != Pieces::Pawn {
                             moves.push(Box::new(BasicMove::new(
                                 Square::from_idx(i),
                                 Square::from_idx(j),
                             )));
                             continue;
-                        }
+                       //}
 
+                            /* 
                         let promotion_row = match side_to_move {
                             Sides::White => WHITE_PROMOTION_ROW,
                             Sides::Black => BLACK_PROMOTION_ROW,
@@ -252,10 +253,11 @@ impl Board {
                                 )));
                             }
                         }
+                        */
                     }
                 }
-                // Add promotions to pawns
 
+                 
                 for j in 0..64 {
                     if captures.0 & (1 << j) != 0 {
                         let captured_piece = self.get_piece(Square::from_idx(j));
@@ -266,7 +268,7 @@ impl Board {
                         )));
                     }
                 }
-
+                /* 
                 // Add castling logic
                 if piece == Pieces::King {
                     if side_to_move == Sides::White {
@@ -282,7 +284,7 @@ impl Board {
                             moves.push(Box::new(Castle::new(Sides::Black, false)));
                         }
                     }
-                }
+                }*/
             }
         }
         moves
