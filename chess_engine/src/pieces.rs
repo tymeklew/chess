@@ -13,9 +13,7 @@ pub enum Sides {
     White = 0,
     Black = 1,
 }
-
 pub const ALL_SIDES: [Sides; 2] = [Sides::Black, Sides::White];
-
 impl Sides {
     pub fn other(&self) -> Sides {
         match self {

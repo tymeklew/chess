@@ -1,6 +1,5 @@
 use crate::board::Board;
-use crate::pieces::Pieces;
-use crate::{Move, Sides, Square};
+use crate::{Move, Sides};
 pub struct ChessGame {
     turn: Sides,
     board: Board,
@@ -14,16 +13,15 @@ impl ChessGame {
         }
     }
 
-    pub fn mv<T>(&mut self, m: &T) where T : Move {
+    pub fn mv<T>(&mut self, m: Move)
+    {
         m.apply(&mut self.board);
         self.turn = self.turn.other();
     }
-
-    pub fn boxed_mv(&mut self, m: Box<dyn Move>) {
-        m.apply(&mut self.board);
-        self.turn = self.turn.other();
+    pub fn move_from_uci(&self, input: &str) -> Option<Move>
+    {
+        self.board.move_from_uci(input)
     }
-
     pub fn board(&self) -> &Board {
         &self.board
     }

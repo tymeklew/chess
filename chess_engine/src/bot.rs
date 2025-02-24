@@ -1,9 +1,9 @@
-use std::{i32, process::ExitStatus};
+use std::i32;
 
 use crate::{
     board::Board,
     moves::Move,
-    pieces::{Pieces, Sides, ALL_PIECES, ALL_SIDES},
+    pieces::{Pieces, Sides},
 };
 
 pub fn evaluate(board: &Board, side: Sides) -> i32 {
@@ -15,16 +15,17 @@ pub fn evaluate(board: &Board, side: Sides) -> i32 {
     // Claude Shannon's evaluation function
     sign * (200
         * (board.count_piece(Sides::White, Pieces::King)
-            - board.count_piece(Sides::Black, Pieces::King))
+        - board.count_piece(Sides::Black, Pieces::King))
         + 9 * (board.count_piece(Sides::White, Pieces::Queen)
-            - board.count_piece(Sides::Black, Pieces::Queen))
+        - board.count_piece(Sides::Black, Pieces::Queen))
         + 5 * (board.count_piece(Sides::White, Pieces::Rook)
-            - board.count_piece(Sides::Black, Pieces::Rook)
+        - board.count_piece(Sides::Black, Pieces::Rook)
         + 3 * (board.count_piece(Sides::White, Pieces::Knight)
-            - board.count_piece(Sides::Black, Pieces::Knight))
-            + (board.count_piece(Sides::White, Pieces::Bishop))
-            - board.count_piece(Sides::Black, Pieces::Bishop)))
-        + 1 * (board.count_piece(Sides::White, Pieces::Pawn) - board.count_piece(Sides::Black , Pieces::Pawn))
+        - board.count_piece(Sides::Black, Pieces::Knight))
+        + (board.count_piece(Sides::White, Pieces::Bishop))
+        - board.count_piece(Sides::Black, Pieces::Bishop)))
+        + 1 * (board.count_piece(Sides::White, Pieces::Pawn)
+        - board.count_piece(Sides::Black, Pieces::Pawn))
 }
 
 //TODO
@@ -33,7 +34,7 @@ pub fn evaluate(board: &Board, side: Sides) -> i32 {
         let mid = moves.len() / 2;
 
         let mut left = moves;
-        let right = left.split_off(mid); 
+        let right = left.split_off(mid);
 
         let left = merge_sort(left);
         let right = merge_sort(right);
@@ -70,8 +71,7 @@ pub fn evaluate(board: &Board, side: Sides) -> i32 {
     moves
 }*/
 
- 
-pub fn bot_move(board: &Board, depth: usize, side: Sides) -> (i32, Option<Box<dyn Move>>) {
+pub fn bot_move(board: &Board, depth: usize, side: Sides) -> (i32, Option<Move>) {
     let mut board = board.clone();
     match side {
         Sides::White => maxi(&mut board, depth, side, i32::MIN, i32::MAX),
@@ -85,7 +85,7 @@ pub fn maxi(
     side: Sides,
     mut alpha: i32,
     beta: i32,
-) -> (i32, Option<Box<dyn Move>>) {
+) -> (i32, Option<Move>) {
     if depth == 0 {
         return (evaluate(board, side.other()), None);
     };
@@ -93,7 +93,9 @@ pub fn maxi(
     let mut max = i32::MIN;
     let mut best_move = None;
     for mv in board.legal_moves(side) {
-        mv.apply(board);
+        if !mv.apply(board) {
+            continue;
+        }
         let (score, _) = mini(board, depth - 1, side.other(), alpha, beta);
         mv.undo(board);
 
@@ -116,7 +118,7 @@ pub fn mini(
     side: Sides,
     alpha: i32,
     mut beta: i32,
-) -> (i32, Option<Box<dyn Move>>) {
+) -> (i32, Option<Move>) {
     if depth == 0 {
         return (evaluate(board, side.other()), None);
     };
@@ -124,9 +126,10 @@ pub fn mini(
     let mut min = i32::MAX;
     let mut best_move = None;
     for mv in board.legal_moves(side) {
-        mv.apply(board);
+        if !mv.apply(board) {
+            continue;
+        }
         let (score, _) = maxi(board, depth - 1, side.other(), alpha, beta);
-        // UNDO not tested yet if issues occur check here
         mv.undo(board);
 
         if score < min {

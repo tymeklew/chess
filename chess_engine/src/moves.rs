@@ -1,9 +1,63 @@
-use crate::{board::{Bitboard, Board}, pieces::{self, Pieces, Sides}, square::Square};
-use std::{fmt::{Debug, Display}, ops::BitAnd};
+use crate::board::{Bitboard, Board};
+use crate::pieces::Pieces;
+use crate::{Sides, Square};
+use std::fmt::{Debug, Display};
 
-pub trait Move: Display + Debug  {
+#[derive(Debug)]
+pub enum Move {
+    Basic { source: Square, destination: Square },
+    Capture { source: Square, destination: Square, capture: Pieces },
+    Castling { side: Sides, king_side: bool },
+    Promotion { source: Square, destination: Square, capture: Option<Pieces>, promotion_piece: Pieces },
+    EnPassant,
+}
+
+impl Move {
+    pub fn apply(&self, board: &mut Board) -> bool {
+        match self {
+            Move::Basic { source, destination } => apply_basic(source, destination, board),
+            Move::Capture { source, destination, capture } => apply_capture(source, destination, capture, board),
+            _ => todo!()
+        }
+    }
+    pub fn undo(&self, board: &mut Board) -> bool {
+        match self {
+            Move::Basic { source, destination } => undo_basic(source, destination, board),
+            Move::Capture { source, destination, capture } => undo_capture(source, destination, capture, board),
+            _ => todo!()
+        }
+    }
+}
+
+fn apply_basic(source: &Square, destination: &Square, board: &mut Board) -> bool {
+    let source_piece = match board.get_piece(*source) {
+        Some(piece) => piece,
+        None => return false
+    };
+    let source_side = match board.get_side(*source) {
+        Some(side) => side,
+        None => return false
+    };
+
+    board.sides[source_side] ^= Bitboard(1 << source.idx());
+    board.pieces[source_side][source_piece] ^= Bitboard(1 << source.idx());
+
+    board.place_piece(source_side, source_piece, *destination);
+    true
+}
+fn undo_basic(source: &Square, destination: &Square, board: &mut Board) -> bool {
+    false
+}
+fn apply_capture(source: &Square, destination: &Square, capture: &Pieces, board: &mut Board) -> bool {
+    false
+}
+fn undo_capture(source: &Square, destination: &Square, capture: &Pieces, board: &mut Board) -> bool {
+    false
+}
+
+/*pub trait Move: Display + Debug {
     fn apply(&self, board: &mut Board);
-    fn undo(&self , board : &mut Board);
+    fn undo(&self, board: &mut Board);
     fn capture(&self) -> Option<Pieces>;
 }
 
@@ -24,12 +78,12 @@ impl Move for BasicMove {
         let piece = board.get_piece(self.from);
 
         board.sides[side].0 ^= 1 << self.from.idx(); // Remove piece from the source square
-        board.sides[side].0 ^= 1 << self.to.idx();   // Add piece to the destination square
-        
+        board.sides[side].0 ^= 1 << self.to.idx(); // Add piece to the destination square
+
         board.pieces[side][piece].0 ^= 1 << self.from.idx(); // Remove from piece-specific bitboard
-        board.pieces[side][piece].0 ^= 1 << self.to.idx();   // Add to piece-specific bitboard
+        board.pieces[side][piece].0 ^= 1 << self.to.idx(); // Add to piece-specific bitboard
     }
-    fn undo(&self , board: &mut Board) {
+    fn undo(&self, board: &mut Board) {
         let side = board.get_side(self.to);
         let piece = board.get_piece(self.to);
 
@@ -49,22 +103,30 @@ impl BasicMove {
     }
 }
 
-#[derive(Clone , Debug)]
+#[derive(Clone, Debug)]
 pub struct Promotion {
-    from : Square,
-    to : Square,
-    promotion : Pieces,
+    from: Square,
+    to: Square,
+    promotion: Pieces,
 }
 
 impl Promotion {
-    pub fn new(from : Square , to : Square , promotion : Pieces) -> Self {
-        Promotion { from , to , promotion }
+    pub fn new(from: Square, to: Square, promotion: Pieces) -> Self {
+        Promotion {
+            from,
+            to,
+            promotion,
+        }
     }
 }
 
 impl Display for Promotion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f , "{} -> {} promoting to {}", self.from , self.to , self.promotion)
+        write!(
+            f,
+            "{} -> {} promoting to {}",
+            self.from, self.to, self.promotion
+        )
     }
 }
 
@@ -77,8 +139,8 @@ impl Move for Promotion {
         None
     }
 
-    fn undo(&self , board : &mut Board) {
-       todo!() 
+    fn undo(&self, board: &mut Board) {
+        todo!()
     }
 }
 
@@ -102,11 +164,11 @@ impl Move for Capture {
 
         board.sides[capture_side] ^= Bitboard(1 << self.to.idx());
         board.pieces[capture_side][capture_piece] ^= Bitboard(1 << self.to.idx());
-        
+
         BasicMove::new(self.from, self.to).apply(board);
     }
 
-    fn undo(&self , board: &mut Board) {
+    fn undo(&self, board: &mut Board) {
         let side = board.get_side(self.to);
         let piece = board.get_piece(self.to);
         // Remove captured piece from board
@@ -118,7 +180,6 @@ impl Move for Capture {
 
         board.place_piece(side.other(), self.capture, self.to);
         board.place_piece(side, piece, self.from);
-
     }
 
     fn capture(&self) -> Option<Pieces> {
@@ -130,4 +191,4 @@ impl Capture {
     pub fn new(from: Square, to: Square, capture: Pieces) -> Self {
         Capture { from, to, capture }
     }
-}
+}*/

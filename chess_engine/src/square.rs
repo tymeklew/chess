@@ -36,7 +36,7 @@ impl Square {
         format!("{}{}", file_char, self.rank)
     }
 
-    pub fn from_algebraic(input : String) -> Option<Square> {
+    pub fn from_algebraic(input: String) -> Option<Square> {
         if input.len() != 2 {
             return None;
         }
@@ -46,10 +46,9 @@ impl Square {
         let rank = chrs.nth(0)?.to_digit(10)?;
 
         Some(Square {
-            file : (file as u8 - b'a') as usize,
-            rank : rank as usize - 1 
+            file: (file as u8 - b'a') as usize,
+            rank: rank as usize - 1,
         })
-
     }
 }
 

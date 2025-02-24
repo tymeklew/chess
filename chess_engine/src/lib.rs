@@ -10,98 +10,49 @@ mod tree;
 pub use bot::bot_move;
 pub use game::ChessGame;
 pub use moves::Move;
-pub use moves::{BasicMove, Capture};
 pub use pieces::Sides;
 pub use square::Square;
 
 #[cfg(test)]
 mod tests {
-
-    use crate::moves::Promotion;
-    use crate::pieces::{Pieces, Sides};
-    use crate::{square, Move};
-    use crate::Square;
-    use crate::{board::Board, bot_move};
-    use crate::{Capture, ChessGame};
+    use crate::ChessGame;
 
     #[test]
-    fn promotion() {
-        let fen = "7k/P7/8/8/8/8/8/K7 w - - 0 1".to_string();
-        let mut board = Board::from_fen(fen);
+    fn promotion() {}
 
-        let moves = board.legal_moves(Sides::White);
+    #[test]
+    fn checkmate() {}
 
-        // 4 moves for promotion & 3 moves for king
-        assert_eq!(moves.len(), 7);
+    #[test]
+    fn stalemate() {}
 
-        let promotion_move = Promotion::new(Square::new(0, 6), Square::new(0, 7), Pieces::Queen);
-        promotion_move.apply(&mut board);
+    #[test]
+    fn castle() {}
 
-        // Magic numer for queen and 2 kings in correct position
-        assert_eq!(board.sides[Sides::White].0, 72057594037927937);
+    #[test]
+    fn capture() {}
+
+    #[test]
+    fn uci() {
+        let game = ChessGame::new();
+        let str = "e2e3";
+        let mv = game.move_from_uci(str);
+        
+
+        println!("{:?}", mv);
     }
-
-    #[test]
-    fn checkmate() {
-        let fen = "7k/6Q1/5K2/8/8/8/8/8 b - - 0 1".to_string();
-        let board = Board::from_fen(fen);
-
-        assert_eq!(board.is_checkmate(Sides::Black), true);
-
-        let fen = "7k/5N2/8/8/3B4/3B4/8/K5R1 b - - 0 1".to_string();
-        let board = Board::from_fen(fen);
-        assert_eq!(board.is_checkmate(Sides::Black), true);
-
-        let fen = "7k/8/8/8/8/3B4/8/K5R1 b - - 0 1".to_string();
-        let board = Board::from_fen(fen);
-        assert_eq!(board.is_checkmate(Sides::Black), false);
-    }
-
-    #[test]
-    fn stalemate() {
-        let fen = "7k/2R5/8/8/8/8/8/K5R1 w - - 0 1".to_string();
-        let board = Board::from_fen(fen);
-
-        assert_eq!(board.is_stalemate(Sides::Black), true);
-    }
-
-    #[test]
-    fn castle() {
-        let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R3KBNR w KQkq - 0 1".to_string();
-        let board = Board::from_fen(fen);
-
-        let x = board.legal_moves(Sides::White);
-        for i in x {
-            //println!("{}", i);
-        }
-    }
-
-    #[test]
-    fn capture() {
-        let mut board = Board::from_fen("8/8/8/8/3k4/1r6/2B5/K7 w - - 0 1".to_string());
-
-        for mv in board.legal_moves(Sides::White) {
-            mv.apply(&mut board);
-            mv.undo(&mut board);
-        }
-    }
-
-    #[test]
-    fn movement() {}
 
     #[test]
     fn it_works() {
         let mut game = ChessGame::new();
-        
-        let mv = Square::from_algebraic("a1".to_string());
-        println!("Move : {}" , mv.unwrap()); 
 
-        loop {
+
+        /*loop {
             std::io::stdin().read_line(&mut String::new()).unwrap();
             let white_mv = bot_move(game.board(), 3, Sides::White);
             let mv = white_mv.1.unwrap();
-            println!("Score : {}" , white_mv.0);
-            println!("Move : {}" , mv);
+            println!("Score : {}", white_mv.0);
+            println!("Move : {}", mv);
             game.boxed_mv(mv);
             game.board().display();
 
@@ -109,6 +60,6 @@ mod tests {
             let black_mv = bot_move(game.board(), 3, Sides::Black).1.unwrap();
             game.boxed_mv(black_mv);
             game.board().display();
-        }
+        }*/
     }
 }

@@ -66,3 +66,14 @@ impl Game for BotGame {
         }
     }
 }
+
+// UCI (Universal Chess Interface)
+/*
+   Make Move
+   type : "move"
+   data : "e5e6"
+
+   Legal Moves
+   type : "legal_moves"
+   data : "e4e5,"
+*/

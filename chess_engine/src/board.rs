@@ -1,6 +1,6 @@
 use crate::attacks::{pawn_moves, sliding_attacks, step_attacks};
-use crate::moves::{BasicMove, Capture, Move, Promotion};
-use crate::pieces::{self, Pieces, Sides, ALL_PIECES, ALL_SIDES, PIECES_COUNT, SIDES_COUNT};
+use crate::moves::Move;
+use crate::pieces::{Pieces, Sides, ALL_PIECES, ALL_SIDES, PIECES_COUNT, SIDES_COUNT};
 use crate::square::Square;
 use core::panic;
 use std::fmt::Display;
@@ -40,7 +40,7 @@ impl MoveRights {
 pub struct Board {
     pub pieces: [[Bitboard; PIECES_COUNT]; SIDES_COUNT],
     pub sides: [Bitboard; SIDES_COUNT],
-    pub move_rights : MoveRights,
+    pub move_rights: MoveRights,
 }
 
 impl Board {
@@ -54,10 +54,12 @@ impl Board {
                 let idx = i * 8 + j;
                 if Bitboard(1 << idx) & occupied != Bitboard(0) {
                     let piece = self.get_piece(Square::from_idx(idx));
+                    if piece.is_none() { continue; };
+                    let piece = piece.unwrap();
                     print!(
                         "{}",
                         match self.get_side(Square::from_idx(idx)) {
-                            Sides::White => match piece {
+                            Some(Sides::White) => match piece {
                                 Pieces::Pawn => "♟",
                                 Pieces::Rook => "♜",
                                 Pieces::Knight => "♞",
@@ -65,7 +67,7 @@ impl Board {
                                 Pieces::Queen => "♛",
                                 Pieces::King => "♚",
                             },
-                            Sides::Black => match piece {
+                            Some(Sides::Black) => match piece {
                                 Pieces::Pawn => "♙",
                                 Pieces::Rook => "♖",
                                 Pieces::Knight => "♘",
@@ -73,6 +75,7 @@ impl Board {
                                 Pieces::Queen => "♕",
                                 Pieces::King => "♔",
                             },
+                            _ => continue,
                         }
                     );
                     continue;
@@ -95,29 +98,28 @@ impl Board {
         self.sides[side]
     }
 
-    pub fn get_piece(&self, pos: Square) -> Pieces {
+    pub fn get_piece(&self, pos: Square) -> Option<Pieces> {
         let side = self.get_side(pos);
 
         for piece in ALL_PIECES {
             if self.pieces[side][piece].0 & (1 << pos.idx()) != 0 {
-                return piece;
+                return Some(piece);
             }
         }
 
-        return Pieces::Pawn;
+        None
     }
 
-    pub fn get_side(&self, pos: Square) -> Sides {
+    pub fn get_side(&self, pos: Square) -> Option<Sides> {
         let idx = pos.idx();
 
         for side in ALL_SIDES {
             if self.sides[side].0 & (1 << idx) != 0 {
-                return side;
+                return Some(side);
             }
         }
 
-        // Need to fix
-        Sides::White
+        None
     }
 
     pub fn is_check(&self, side: Sides) -> bool {
@@ -137,14 +139,52 @@ impl Board {
         !self.is_check(side) && self.legal_moves(side).is_empty()
     }
 
-    //TODO
-    // Generate move from 2 different squares
-    pub fn from_squares(&self , source : Square , destination : Square) -> Box<dyn Move> {
-        let from_side = self.get_side(source);
-        let to_side = self.get_side(destination);
+    // Universal chess interface
+    // Example: e2e4
+    pub fn move_from_uci(&self, input: &str) -> Option<Move>
+    {
+        match input.len() {
+            4 => {
+                let chunks: Vec<String> = input
+                    .chars()
+                    .collect::<Vec<char>>()
+                    .chunks(2)
+                    .map(|c| c.iter().collect::<String>())
+                    .collect();
 
+                let source = Square::from_algebraic(chunks[0].clone())?;
+                let destination = Square::from_algebraic(chunks[1].clone())?;
 
-        todo!()
+                let source_side = self.get_side(source)?;
+
+                let capture = match self.get_side(destination) {
+                    Some(side) if side == source_side.other() => true,
+                    Some(_) => return None,
+                    _ => false,
+                };
+
+                if capture {
+                    match self.get_piece(destination) {
+                        Some(piece) => Some(Move::Capture {
+                            source,
+                            destination,
+                            capture: piece,
+                        }),
+                        None => None,
+                    }
+                } else {
+                    Some(Move::Basic {
+                        source,
+                        destination,
+                    })
+                }
+            }
+            //TODO
+            5 => {
+                todo!()
+            }
+            _ => None,
+        }
     }
 
     pub fn new() -> Self {
@@ -178,7 +218,7 @@ impl Board {
         board
     }
 
-    pub fn legal_moves(&self, side_to_move: Sides) -> Vec<Box<dyn Move>> {
+    pub fn legal_moves(&self, side_to_move: Sides) -> Vec<Move> {
         self.pseudo_legal_moves(side_to_move)
             .into_iter()
             .filter(|f| {
@@ -190,7 +230,7 @@ impl Board {
     }
 
     // Generates moves including pawn moves
-    fn pseudo_legal_moves(&self, side_to_move: Sides) -> Vec<Box<dyn Move>> {
+    fn pseudo_legal_moves(&self, side_to_move: Sides) -> Vec<Move> {
         const ROOK_RAY_INDEX: [usize; 4] = [0, 1, 4, 5];
         const BISHOP_RAY_INDEX: [usize; 4] = [2, 3, 6, 7];
         const KNIGHT_DELTAS: [i8; 8] = [15, 17, 10, 6, -15, -17, -10, -6];
@@ -203,7 +243,7 @@ impl Board {
         const KING_SIDE_CASTLE: Bitboard = Bitboard(0b01100000);
 
         let occupied = self.occupied();
-        let mut moves: Vec<Box<dyn Move>> = Vec::new();
+        let mut moves: Vec<Move> = Vec::new();
 
         for piece in ALL_PIECES {
             for i in 0..64 {
@@ -240,22 +280,24 @@ impl Board {
 
                 for j in 0..64 {
                     if basic_moves.0 & (1 << j) != 0 {
-                            moves.push(Box::new(BasicMove::new(
-                                Square::from_idx(i),
-                                Square::from_idx(j),
-                            )));
-                            continue;
+                        moves.push(Move::Basic {
+                            source: Square::from_idx(i),
+                            destination: Square::from_idx(j),
+                        });
+                        continue;
                     }
                 }
 
                 for j in 0..64 {
                     if captures.0 & (1 << j) != 0 {
                         let captured_piece = self.get_piece(Square::from_idx(j));
-                        moves.push(Box::new(Capture::new(
-                            Square::from_idx(i),
-                            Square::from_idx(j),
-                            captured_piece,
-                        )));
+                        if let Some(capture) = captured_piece {
+                            moves.push(Move::Capture {
+                                source: Square::from_idx(i),
+                                destination: Square::from_idx(j),
+                                capture,
+                            });
+                        }
                     }
                 }
             }
@@ -292,19 +334,13 @@ impl Board {
                 };
 
                 match c.to_ascii_lowercase() {
-                    'p' => board
-                        .place_piece(side, Pieces::Pawn, Square::new(file,  7 - rank)),
-                    'r' => board
-                        .place_piece(side, Pieces::Rook, Square::new(file, 7 - rank)),
-                    'n' => board
-                        .place_piece(side, Pieces::Knight, Square::new(file, 7 - rank)),
-                    'b' => board
-                        .place_piece(side, Pieces::Bishop, Square::new(file, 7 - rank)),
-                    'q' => board
-                        .place_piece(side, Pieces::Queen, Square::new(file, 7 - rank)),
-                    'k' =>board
-                        .place_piece(side, Pieces::King, Square::new(file, 7 - rank)),
-                    _ => panic!("Invalid piece {}" , c.to_ascii_lowercase()),
+                    'p' => board.place_piece(side, Pieces::Pawn, Square::new(file, 7 - rank)),
+                    'r' => board.place_piece(side, Pieces::Rook, Square::new(file, 7 - rank)),
+                    'n' => board.place_piece(side, Pieces::Knight, Square::new(file, 7 - rank)),
+                    'b' => board.place_piece(side, Pieces::Bishop, Square::new(file, 7 - rank)),
+                    'q' => board.place_piece(side, Pieces::Queen, Square::new(file, 7 - rank)),
+                    'k' => board.place_piece(side, Pieces::King, Square::new(file, 7 - rank)),
+                    _ => panic!("Invalid piece {}", c.to_ascii_lowercase()),
                 }
                 file += 1;
             }
