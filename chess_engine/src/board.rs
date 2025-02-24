@@ -1,5 +1,5 @@
 use crate::attacks::{pawn_moves, sliding_attacks, step_attacks};
-use crate::moves::{BasicMove, Capture, Castle, Move, Promotion};
+use crate::moves::{BasicMove, Capture, Move, Promotion};
 use crate::pieces::{self, Pieces, Sides, ALL_PIECES, ALL_SIDES, PIECES_COUNT, SIDES_COUNT};
 use crate::square::Square;
 use core::panic;
@@ -255,18 +255,6 @@ impl Board {
 
     pub fn count_piece(&self, side: Sides, piece: Pieces) -> i32 {
         self.pieces[side][piece].0.count_ones() as i32
-    }
-
-    // TODO
-    // Any pawns with no pawns adjacent columns 
-    pub fn isolated_pawns(&self , side : Sides) -> i32 {
-        let mut sum = 0;
-        for i in 0..8 {
-            if (Bitboard(0xFF << (i * 8)) & self.pieces[side][Pieces::Pawn]).0.count_ones() == 1 {
-                sum += 1;
-            }
-        }
-        return sum;
     }
 
     pub fn place_piece(&mut self, side: Sides, piece: Pieces, square: Square) {

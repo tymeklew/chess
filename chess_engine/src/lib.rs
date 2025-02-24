@@ -19,7 +19,7 @@ mod tests {
 
     use crate::moves::Promotion;
     use crate::pieces::{Pieces, Sides};
-    use crate::Move;
+    use crate::{square, Move};
     use crate::Square;
     use crate::{board::Board, bot_move};
     use crate::{Capture, ChessGame};
@@ -81,15 +81,8 @@ mod tests {
         let mut board = Board::from_fen("8/8/8/8/3k4/1r6/2B5/K7 w - - 0 1".to_string());
 
         for mv in board.legal_moves(Sides::White) {
-            println!("Move : {}" , mv);
-            board.display();
-            println!();
             mv.apply(&mut board);
-            board.display();
             mv.undo(&mut board);
-            println!();
-            board.display();
-            println!("\n\n");
         }
     }
 
@@ -99,21 +92,23 @@ mod tests {
     #[test]
     fn it_works() {
         let mut game = ChessGame::new();
+        
+        let mv = Square::from_algebraic("a1".to_string());
+        println!("Move : {}" , mv.unwrap()); 
 
-        loop {
+        /*loop {
             std::io::stdin().read_line(&mut String::new()).unwrap();
-            let white_mv = bot_move(game.board(), 1, Sides::White).1.unwrap();
-            println!("White : {}", white_mv);
-            game.boxed_mv(white_mv);
-
+            let white_mv = bot_move(game.board(), 3, Sides::White);
+            let mv = white_mv.1.unwrap();
+            println!("Score : {}" , white_mv.0);
+            println!("Move : {}" , mv);
+            game.boxed_mv(mv);
             game.board().display();
 
             std::io::stdin().read_line(&mut String::new()).unwrap();
-            let black_mv = bot_move(game.board(), 1, Sides::Black).1.unwrap();
-            println!("Black : {}", &black_mv);
+            let black_mv = bot_move(game.board(), 3, Sides::Black).1.unwrap();
             game.boxed_mv(black_mv);
-
             game.board().display();
-        }
+        }*/
     }
 }

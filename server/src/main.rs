@@ -11,7 +11,6 @@ use axum::routing::{any, get, post};
 use axum::{Extension, Router};
 use axum_extra::headers::UserAgent;
 use axum_extra::TypedHeader;
-use futures::lock::Mutex;
 use log::info;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
@@ -58,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
     let state = Arc::new(AppState { pool });
 
     let app = Router::new()
-        .route("/ws", any(ws_handler))
+        .route("/api/ws", any(ws_handler))
         .route("/api/friends/request", post(friends::friend_request))
         .route(
             "/api/friends/response",
@@ -102,7 +101,7 @@ async fn ws_handler(
     };
 
     info!("{user_agent} connected at {addr}");
-    ws.on_upgrade(move |socket| handle_socket(socket, addr, state))
+    ws.on_upgrade(move |sock| handle_socket(sock, addr, state))
 }
 
 async fn handle_socket(mut sock: WebSocket, addr: SocketAddr, _: Arc<AppState>) {
@@ -113,4 +112,6 @@ async fn handle_socket(mut sock: WebSocket, addr: SocketAddr, _: Arc<AppState>) 
         // If we can not send messages, there is no way to salvage the statemachine anyway.
         return;
     }
+
+    sock.send(Message::Text("Hello World".into())).await;
 }

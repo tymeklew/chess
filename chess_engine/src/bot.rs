@@ -87,7 +87,7 @@ pub fn maxi(
     beta: i32,
 ) -> (i32, Option<Box<dyn Move>>) {
     if depth == 0 {
-        return (evaluate(board, side), None);
+        return (evaluate(board, side.other()), None);
     };
 
     let mut max = i32::MIN;
@@ -96,7 +96,6 @@ pub fn maxi(
         mv.apply(board);
         let (score, _) = mini(board, depth - 1, side.other(), alpha, beta);
         mv.undo(board);
-        println!("Move : {} , Score : {}" , mv , score);
 
         if score > max {
             max = score;
@@ -112,23 +111,23 @@ pub fn maxi(
     return (max, best_move);
 }
 pub fn mini(
-    mut board: &mut Board,
+    board: &mut Board,
     depth: usize,
     side: Sides,
     alpha: i32,
     mut beta: i32,
 ) -> (i32, Option<Box<dyn Move>>) {
     if depth == 0 {
-        return (evaluate(board, side), None);
+        return (evaluate(board, side.other()), None);
     };
 
     let mut min = i32::MAX;
     let mut best_move = None;
     for mv in board.legal_moves(side) {
-        mv.apply(&mut board);
+        mv.apply(board);
         let (score, _) = maxi(board, depth - 1, side.other(), alpha, beta);
         // UNDO not tested yet if issues occur check here
-        mv.undo(&mut board);
+        mv.undo(board);
 
         if score < min {
             min = score;

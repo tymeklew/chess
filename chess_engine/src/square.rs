@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::Index};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Square {
@@ -34,6 +34,22 @@ impl Square {
     pub fn to_algebraic(&self) -> String {
         let file_char = (b'a' + self.file as u8) as char;
         format!("{}{}", file_char, self.rank)
+    }
+
+    pub fn from_algebraic(input : String) -> Option<Square> {
+        if input.len() != 2 {
+            return None;
+        }
+
+        let mut chrs = input.chars();
+        let file = chrs.nth(0)?;
+        let rank = chrs.nth(0)?.to_digit(10)?;
+
+        Some(Square {
+            file : (file as u8 - b'a') as usize,
+            rank : rank as usize - 1 
+        })
+
     }
 }
 

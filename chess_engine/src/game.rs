@@ -27,5 +27,4 @@ impl ChessGame {
     pub fn board(&self) -> &Board {
         &self.board
     }
-
 }
