@@ -230,34 +230,14 @@ impl Board {
 
                 for j in 0..64 {
                     if basic_moves.0 & (1 << j) != 0 {
-                        //if piece != Pieces::Pawn {
                             moves.push(Box::new(BasicMove::new(
                                 Square::from_idx(i),
                                 Square::from_idx(j),
                             )));
                             continue;
-                       //}
-
-                            /* 
-                        let promotion_row = match side_to_move {
-                            Sides::White => WHITE_PROMOTION_ROW,
-                            Sides::Black => BLACK_PROMOTION_ROW,
-                        };
-
-                        if promotion_row.0 & (1 << j) != 0 {
-                            for promotion_piece in &ALL_PIECES[1..5] {
-                                moves.push(Box::new(Promotion::new(
-                                    Square::from_idx(i),
-                                    Square::from_idx(j),
-                                    *promotion_piece,
-                                )));
-                            }
-                        }
-                        */
                     }
                 }
 
-                 
                 for j in 0..64 {
                     if captures.0 & (1 << j) != 0 {
                         let captured_piece = self.get_piece(Square::from_idx(j));
@@ -268,23 +248,6 @@ impl Board {
                         )));
                     }
                 }
-                /* 
-                // Add castling logic
-                if piece == Pieces::King {
-                    if side_to_move == Sides::White {
-                        if (occupied.0 & KING_SIDE_CASTLE.0 == 0) & self.move_rights.white_king_side {
-                            moves.push(Box::new(Castle::new(Sides::White, true)));
-                        } else if (occupied.0 & QUEEN_SIDE_CASTLE.0 == 0) & self.move_rights.white_queen_side {
-                            moves.push(Box::new(Castle::new(Sides::White, false)));
-                        }
-                    } else {
-                        if (occupied.0 & (KING_SIDE_CASTLE.0 << (8 * 7)) == 0) & self.move_rights.black_king_side {
-                            moves.push(Box::new(Castle::new(Sides::Black, true)));
-                        } else if (occupied.0 & (QUEEN_SIDE_CASTLE.0 << (8 * 7)) == 0) & self.move_rights.black_queen_side{
-                            moves.push(Box::new(Castle::new(Sides::Black, false)));
-                        }
-                    }
-                }*/
             }
         }
         moves
@@ -292,6 +255,18 @@ impl Board {
 
     pub fn count_piece(&self, side: Sides, piece: Pieces) -> i32 {
         self.pieces[side][piece].0.count_ones() as i32
+    }
+
+    // TODO
+    // Any pawns with no pawns adjacent columns 
+    pub fn isolated_pawns(&self , side : Sides) -> i32 {
+        let mut sum = 0;
+        for i in 0..8 {
+            if (Bitboard(0xFF << (i * 8)) & self.pieces[side][Pieces::Pawn]).0.count_ones() == 1 {
+                sum += 1;
+            }
+        }
+        return sum;
     }
 
     pub fn place_piece(&mut self, side: Sides, piece: Pieces, square: Square) {

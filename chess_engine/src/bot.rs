@@ -20,12 +20,57 @@ pub fn evaluate(board: &Board, side: Sides) -> i32 {
             - board.count_piece(Sides::Black, Pieces::Queen))
         + 5 * (board.count_piece(Sides::White, Pieces::Rook)
             - board.count_piece(Sides::Black, Pieces::Rook)
-            + board.count_piece(Sides::White, Pieces::Knight)
+        + 3 * (board.count_piece(Sides::White, Pieces::Knight)
             - board.count_piece(Sides::Black, Pieces::Knight))
-        + 3 * (board.count_piece(Sides::White, Pieces::Bishop)
+            + (board.count_piece(Sides::White, Pieces::Bishop))
             - board.count_piece(Sides::Black, Pieces::Bishop)))
+        + 1 * (board.count_piece(Sides::White, Pieces::Pawn) - board.count_piece(Sides::Black , Pieces::Pawn))
 }
 
+//TODO
+/*pub fn merge_sort(mut moves : Vec<(i32 , Box<dyn Move>)>) -> Vec<(i32 , Box<dyn Move>)> {
+    if moves.len() > 1 {
+        let mid = moves.len() / 2;
+
+        let mut left = moves;
+        let right = left.split_off(mid); 
+
+        let left = merge_sort(left);
+        let right = merge_sort(right);
+
+        let mut i = 0;
+        let mut j = 0;
+
+        let mut new = Vec::new();
+        while i < left.len() & j < right.len() {
+            if left[i] > right[j] {
+                new.push(left[i]);
+                i += 1;
+            }else {
+                new.push(right[j]);
+                j += 1;
+            }
+        }
+        return new;
+    return moves;
+}*/
+// Merge sort
+/*pub fn sort_moves(board : &Board , side : Sides , moves : Vec<Box<dyn Move>>) -> Vec<Box<dyn Move>> {
+    let mut new = board.clone();
+    let values : Vec<(i32 , Box<dyn Move>)> = moves.into_iter().map(|f| {
+        f.apply(&mut new);
+        let score = evaluate(&new, side);
+        f.undo(&mut new);
+        (score , f)
+    }).collect();
+
+    merge_sort(values);
+
+
+    moves
+}*/
+
+ 
 pub fn bot_move(board: &Board, depth: usize, side: Sides) -> (i32, Option<Box<dyn Move>>) {
     let mut board = board.clone();
     match side {
@@ -51,6 +96,7 @@ pub fn maxi(
         mv.apply(board);
         let (score, _) = mini(board, depth - 1, side.other(), alpha, beta);
         mv.undo(board);
+        println!("Move : {} , Score : {}" , mv , score);
 
         if score > max {
             max = score;

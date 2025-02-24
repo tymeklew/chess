@@ -17,9 +17,6 @@ pub use square::Square;
 #[cfg(test)]
 mod tests {
 
-    use std::time::Instant;
-
-    use crate::board::Bitboard;
     use crate::moves::Promotion;
     use crate::pieces::{Pieces, Sides};
     use crate::Move;
@@ -80,19 +77,39 @@ mod tests {
     }
 
     #[test]
+    fn capture() {
+        let mut board = Board::from_fen("8/8/8/8/3k4/1r6/2B5/K7 w - - 0 1".to_string());
+
+        for mv in board.legal_moves(Sides::White) {
+            println!("Move : {}" , mv);
+            board.display();
+            println!();
+            mv.apply(&mut board);
+            board.display();
+            mv.undo(&mut board);
+            println!();
+            board.display();
+            println!("\n\n");
+        }
+    }
+
+    #[test]
+    fn movement() {}
+
+    #[test]
     fn it_works() {
         let mut game = ChessGame::new();
 
         loop {
             std::io::stdin().read_line(&mut String::new()).unwrap();
-            let white_mv = bot_move(game.board(), 5, Sides::White).1.unwrap();
+            let white_mv = bot_move(game.board(), 1, Sides::White).1.unwrap();
             println!("White : {}", white_mv);
             game.boxed_mv(white_mv);
 
             game.board().display();
 
             std::io::stdin().read_line(&mut String::new()).unwrap();
-            let black_mv = bot_move(game.board(), 5, Sides::Black).1.unwrap();
+            let black_mv = bot_move(game.board(), 1, Sides::Black).1.unwrap();
             println!("Black : {}", &black_mv);
             game.boxed_mv(black_mv);
 
