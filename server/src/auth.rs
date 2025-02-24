@@ -37,16 +37,6 @@ pub struct CreateUser {
     pub password: String,
 }
 
-lazy_static! {
-    pub static ref PASSWORD_REGEX: Regex = Regex::new(
-        r#"(^(?=.*[A-Z]).*(?=.*[a-z]).*(?=.*[\d]).*(?=.*[.!?@%^&*\(\)\{\}\[\]]).*){8,72}"#
-    )
-    .unwrap();
-    pub static ref USERNAME_REGEX: Regex = Regex::new(r#"[A-za-z\d]{3,20}"#).unwrap();
-    pub static ref EMAIL_REGEX: Regex =
-        Regex::new(r#"^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,}$"#).unwrap();
-}
-
 pub async fn signup(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateUser>,

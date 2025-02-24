@@ -96,7 +96,7 @@ mod tests {
         let mv = Square::from_algebraic("a1".to_string());
         println!("Move : {}" , mv.unwrap()); 
 
-        /*loop {
+        loop {
             std::io::stdin().read_line(&mut String::new()).unwrap();
             let white_mv = bot_move(game.board(), 3, Sides::White);
             let mv = white_mv.1.unwrap();
@@ -109,6 +109,6 @@ mod tests {
             let black_mv = bot_move(game.board(), 3, Sides::Black).1.unwrap();
             game.boxed_mv(black_mv);
             game.board().display();
-        }*/
+        }
     }
 }

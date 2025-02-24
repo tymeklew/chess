@@ -137,6 +137,16 @@ impl Board {
         !self.is_check(side) && self.legal_moves(side).is_empty()
     }
 
+    //TODO
+    // Generate move from 2 different squares
+    pub fn from_squares(&self , source : Square , destination : Square) -> Box<dyn Move> {
+        let from_side = self.get_side(source);
+        let to_side = self.get_side(destination);
+
+
+        todo!()
+    }
+
     pub fn new() -> Self {
         let mut board = Board::default();
 
