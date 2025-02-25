@@ -6,6 +6,8 @@ use crate::{
     pieces::{Pieces, Sides},
 };
 
+static mut COUNT : usize = 0;
+
 pub fn evaluate(board: &Board, side: Sides) -> i32 {
     let sign = match side {
         Sides::White => 1,
@@ -73,10 +75,16 @@ pub fn evaluate(board: &Board, side: Sides) -> i32 {
 
 pub fn bot_move(board: &Board, depth: usize, side: Sides) -> (i32, Option<Move>) {
     let mut board = board.clone();
-    match side {
+    let x = match side {
         Sides::White => maxi(&mut board, depth, side, i32::MIN, i32::MAX),
         Sides::Black => mini(&mut board, depth, side, i32::MIN, i32::MAX),
+    };
+
+    unsafe  {
+        println!("Count : {}" , COUNT);
     }
+
+    x
 }
 
 pub fn maxi(
@@ -87,12 +95,16 @@ pub fn maxi(
     beta: i32,
 ) -> (i32, Option<Move>) {
     if depth == 0 {
-        return (evaluate(board, side.other()), None);
+        return (evaluate(board, side), None);
     };
 
     let mut max = i32::MIN;
     let mut best_move = None;
     for mv in board.legal_moves(side) {
+        println!("depth : {} , move : {}" , depth , mv);
+        unsafe  {
+            COUNT += 1;
+        }
         if !mv.apply(board) {
             continue;
         }
@@ -104,10 +116,10 @@ pub fn maxi(
             best_move = Some(mv);
         }
 
-        alpha = alpha.max(score);
+        /*alpha = alpha.max(score);
         if beta <= alpha {
             break;
-        }
+        }*/
     }
 
     return (max, best_move);
@@ -120,27 +132,40 @@ pub fn mini(
     mut beta: i32,
 ) -> (i32, Option<Move>) {
     if depth == 0 {
-        return (evaluate(board, side.other()), None);
+        println!("Reached Depth 0");
+        return (evaluate(board, side), None);
     };
 
     let mut min = i32::MAX;
     let mut best_move = None;
+    println!("depth {}: {} moves", depth, board.legal_moves(side).len());
     for mv in board.legal_moves(side) {
+        //println!("depth : {} , move : {}" , depth , mv);
+        unsafe  {
+            COUNT += 1;
+        }
+        //println!("Before move {} (depth {}):\n", mv, depth);
+        //board.display();
         if !mv.apply(board) {
+            println!("Faiked : {}" , mv);
             continue;
         }
+        //println!("After move {} (depth {}):\n", mv, depth);
+        //board.display();
         let (score, _) = maxi(board, depth - 1, side.other(), alpha, beta);
         mv.undo(board);
+        //println!("After undo {} (depth {}):\n", mv, depth);
+        //board.display();
 
         if score < min {
             min = score;
             best_move = Some(mv);
         }
 
-        beta = beta.min(score);
+        /*beta = beta.min(score);
         if beta <= alpha {
             break;
-        }
+        }*/
     }
 
     return (min, best_move);

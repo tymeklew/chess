@@ -15,7 +15,7 @@ pub use square::Square;
 
 #[cfg(test)]
 mod tests {
-    use crate::ChessGame;
+    use crate::{board::Board, bot::evaluate, bot_move, ChessGame};
 
     #[test]
     fn promotion() {}
@@ -30,7 +30,8 @@ mod tests {
     fn castle() {}
 
     #[test]
-    fn capture() {}
+    fn capture() {
+    }
 
     #[test]
     fn uci() {
@@ -45,21 +46,22 @@ mod tests {
     #[test]
     fn it_works() {
         let mut game = ChessGame::new();
-
-
-        /*loop {
-            std::io::stdin().read_line(&mut String::new()).unwrap();
-            let white_mv = bot_move(game.board(), 3, Sides::White);
-            let mv = white_mv.1.unwrap();
-            println!("Score : {}", white_mv.0);
-            println!("Move : {}", mv);
-            game.boxed_mv(mv);
+        game.board().display();
+        loop {
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input).unwrap();
+            let mv = game.move_from_uci(&input.trim()).unwrap();
+            game.mv(mv);
             game.board().display();
 
-            std::io::stdin().read_line(&mut String::new()).unwrap();
-            let black_mv = bot_move(game.board(), 3, Sides::Black).1.unwrap();
-            game.boxed_mv(black_mv);
+            println!("\n\n\n\n\n\n\n\n");
+            let bot = bot_move(&mut game.board(), 2, crate::Sides::Black);
+            let mv = bot.1.unwrap();
+            println!("Score : {} : {}" , bot.0 , mv);
+            game.mv(mv);
             game.board().display();
-        }*/
+
+
+        }
     }
 }

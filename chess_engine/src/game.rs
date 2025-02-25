@@ -13,7 +13,7 @@ impl ChessGame {
         }
     }
 
-    pub fn mv<T>(&mut self, m: Move)
+    pub fn mv(&mut self, m: Move)
     {
         m.apply(&mut self.board);
         self.turn = self.turn.other();

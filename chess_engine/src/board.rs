@@ -100,6 +100,10 @@ impl Board {
 
     pub fn get_piece(&self, pos: Square) -> Option<Pieces> {
         let side = self.get_side(pos);
+        if side.is_none() {
+            return None;
+        }
+        let side = side.unwrap();
 
         for piece in ALL_PIECES {
             if self.pieces[side][piece].0 & (1 << pos.idx()) != 0 {
@@ -203,10 +207,10 @@ impl Board {
         board.pieces[Sides::Black][Pieces::Bishop] |= Bitboard(1 << (8 * 7 + 2) | 1 << (8 * 7 + 5));
 
         board.pieces[Sides::White][Pieces::Queen] |= Bitboard(1 << 3);
-        board.pieces[Sides::Black][Pieces::Queen] |= Bitboard(1 << (8 * 7 + 4));
+        board.pieces[Sides::Black][Pieces::Queen] |= Bitboard(1 << (8 * 7 + 3));
 
         board.pieces[Sides::White][Pieces::King] |= Bitboard(1 << 4);
-        board.pieces[Sides::Black][Pieces::King] |= Bitboard(1 << (8 * 7 + 3));
+        board.pieces[Sides::Black][Pieces::King] |= Bitboard(1 << (8 * 7 + 4));
 
         board.sides[Sides::White] = board.pieces[Sides::White]
             .iter()
@@ -219,14 +223,16 @@ impl Board {
     }
 
     pub fn legal_moves(&self, side_to_move: Sides) -> Vec<Move> {
-        self.pseudo_legal_moves(side_to_move)
+        /*self.pseudo_legal_moves(side_to_move)
             .into_iter()
             .filter(|f| {
                 let mut new = self.clone();
                 f.apply(&mut new);
                 !new.is_check(side_to_move)
             })
-            .collect()
+            .collect();*/
+
+        self.pseudo_legal_moves(side_to_move)
     }
 
     // Generates moves including pawn moves

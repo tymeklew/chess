@@ -27,7 +27,7 @@ export default function Game() {
 
   function handleButtonClick() {
     setStatus(Status.Connecting);
-    const socket = new WebSocket("ws://localhost:3000/ws");
+    const socket = new WebSocket("/api/ws");
     setWebSock(socket);
     // Connection opened
     socket.onopen = () => {
