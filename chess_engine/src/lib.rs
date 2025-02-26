@@ -23,7 +23,7 @@ mod tests {
     fn checkmate() {
         let fen = String::from("8/8/8/8/8/5K2/6Q1/7k b - - 0 1");
         let board = Board::from_fen(fen);
-        board.display();
+        //board.display();
 
         assert_eq!(board.is_checkmate(Sides::Black), true);
     }
@@ -32,7 +32,7 @@ mod tests {
     fn stalemate() {
         let fen = String::from("8/8/8/8/8/8/5R2/5K1k b - - 0 1");
         let board = Board::from_fen(fen);
-        board.display();
+        //board.display();
 
         assert_eq!(board.is_stalemate(Sides::Black), true);
     }
@@ -58,14 +58,14 @@ mod tests {
         let mv = game.move_from_uci(str);
         
 
-        println!("{:?}", mv);
+        //println!("{:?}", mv);
     }
 
     #[test]
     fn it_works() {
         let mut game = ChessGame::new();
         game.board().display();
-        /*loop {
+        loop {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input).unwrap();
             let mv = game.move_from_uci(&input.trim()).unwrap();
@@ -73,13 +73,13 @@ mod tests {
             game.board().display();
 
             println!("\n\n\n\n\n\n\n\n");
-            let bot = bot_move(&mut game.board(), 2, crate::Sides::Black);
+            let bot = bot_move(&mut game.board(), 1, crate::Sides::Black);
             let mv = bot.1.unwrap();
             println!("Score : {} : {}" , bot.0 , mv);
             game.mv(mv);
             game.board().display();
 
 
-        }*/
+        }
     }
 }

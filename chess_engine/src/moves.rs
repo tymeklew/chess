@@ -84,10 +84,10 @@ fn undo_capture(source: &Square, destination: &Square, capture: &Pieces, board: 
         None => return false
     };
 
-    board.sides[capture_side] ^= Bitboard(1 << destination.idx());
-    board.pieces[capture_side][*capture] ^= Bitboard(1 << destination.idx());
 
     move_piece(destination, source, board);
+    board.sides[capture_side] ^= Bitboard(1 << destination.idx());
+    board.pieces[capture_side][*capture] ^= Bitboard(1 << destination.idx());
     true
 }
 
