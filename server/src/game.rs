@@ -1,7 +1,8 @@
 use axum::extract::ws::{Message, WebSocket};
-use chess_engine::{bot_move, ChessGame, Square};
+use chess_engine::{bot_move, ChessGame, Sides, Square};
 use futures::StreamExt;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use futures::SinkExt;
 
 pub trait Game {
 
@@ -32,11 +33,11 @@ impl BotGame {
     let _ = state.tx.send(msg);
  */
 
-#[derive(Deserialize)]
+#[derive(Deserialize , Serialize , Debug)]
 struct Communication {
     #[serde(rename="type")]
     _type : String,
-    data : String,
+    data : Option<String>,
 }
 //TODO
 impl Game for BotGame {
@@ -45,24 +46,39 @@ impl Game for BotGame {
 
         while let Some(Ok(message)) = receiver.next().await {
             if let Message::Text(command) = message {
+                log::debug!("Received command: {}", command);
                 let communication: Communication = match serde_json::from_str(&command) {
                     Ok(comm) => comm,
                     Err(_) => continue
                 };
+                log::debug!("Parsed command: {:?}", communication);
 
                 match communication._type.as_str() {
                     "move" => {
-                        let mv = self.game.move_from_uci(&communication.data);
+                        let mv = self.game.move_from_uci(&communication.data.unwrap());
                         if let Some(mv) = mv {
                            self.game.mv(mv); 
 
-                           let bot_mv =bot_move(&mut self.game.board(), BOT_DIFFICULTY, chess_engine::Sides::White).1.unwrap();
+                           let bot_mv = bot_move(&mut self.game.board(), BOT_DIFFICULTY, chess_engine::Sides::White).1.unwrap();
                             self.game.mv(bot_mv);
                         }
 
 
                     },
                     "draw" => {},
+                    "legal" => {
+                        let mvs = self.game.legal_moves(Sides::White);
+                        let legal_moves = mvs.iter().map(|m| m.into_uci()).collect::<Vec<String>>().join(",");
+
+                        let response = Communication {
+                            _type : "legal_moves".to_string(),
+                            data : Some(legal_moves)
+                        };
+
+                        let response = serde_json::to_string(&response).unwrap();
+                        sender.send(Message::Text(response)).await.unwrap();
+
+                    }
                     _ => {},
                 };
 

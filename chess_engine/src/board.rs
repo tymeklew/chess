@@ -7,6 +7,12 @@ use std::fmt::Display;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
 #[derive(Clone)]
+pub enum CastlingSide {
+    KingSide,
+    QueenSide
+}
+
+#[derive(Clone)]
 pub struct MoveRights {
     pub white_king_side: bool,
     pub white_queen_side: bool,
@@ -192,7 +198,8 @@ impl Board {
     }
 
     pub fn new() -> Self {
-        let mut board = Board::default();
+        let board = Board::default();
+        let mut board = board;
 
         board.pieces[Sides::White][Pieces::Pawn] |= Bitboard(255 << 8);
         board.pieces[Sides::Black][Pieces::Pawn] |= Bitboard(255 << (8 * 6));
@@ -223,16 +230,14 @@ impl Board {
     }
 
     pub fn legal_moves(&self, side_to_move: Sides) -> Vec<Move> {
-        /*self.pseudo_legal_moves(side_to_move)
+        self.pseudo_legal_moves(side_to_move)
             .into_iter()
             .filter(|f| {
                 let mut new = self.clone();
                 f.apply(&mut new);
                 !new.is_check(side_to_move)
             })
-            .collect();*/
-
-        self.pseudo_legal_moves(side_to_move)
+            .collect()
     }
 
     // Generates moves including pawn moves
@@ -253,59 +258,43 @@ impl Board {
 
         for piece in ALL_PIECES {
             for i in 0..64 {
-                let piece_bb = self.pieces[side_to_move][piece];
-                if piece_bb.0 & (1 << i) == 0 {
-                    continue;
+                if (self.pieces[side_to_move][piece] & Bitboard(1 << i)).0 == 0 {
+                    continue
                 }
 
-                let bb = match piece {
+                let mut bb = match piece {
                     Pieces::Pawn => {
                         let bb = match side_to_move {
-                            Sides::Black => step_attacks(i, &BLACK_PAWN_DELTAS),
                             Sides::White => step_attacks(i, &WHITE_PAWN_DELTAS),
+                            Sides::Black => step_attacks(i, &BLACK_PAWN_DELTAS),
                         };
-                        bb & self.enemy(side_to_move)
-                            | (pawn_moves(i, side_to_move, occupied) & !self.occupied())
+                        bb & self.enemy(side_to_move) | (pawn_moves(i, side_to_move, occupied) & !self.occupied()) 
                     }
                     Pieces::Rook => sliding_attacks(i, occupied, &ROOK_RAY_INDEX),
-                    Pieces::Knight => step_attacks(i, &KNIGHT_DELTAS),
                     Pieces::Bishop => sliding_attacks(i, occupied, &BISHOP_RAY_INDEX),
-                    Pieces::Queen => {
-                        sliding_attacks(i, occupied, &ROOK_RAY_INDEX)
-                            | sliding_attacks(i, occupied, &BISHOP_RAY_INDEX)
-                    }
+                    Pieces::Queen => sliding_attacks(i, occupied, &ROOK_RAY_INDEX) | sliding_attacks(i, occupied, &BISHOP_RAY_INDEX),
                     Pieces::King => step_attacks(i, &KING_DELTAS),
+                    Pieces::Knight => step_attacks(i, &KNIGHT_DELTAS),
                 };
 
                 if bb.0 == 0 {
                     continue;
                 }
 
-                let basic_moves = bb & !self.occupied();
-                let captures = bb & self.enemy(side_to_move);
+                while bb.0 != 0 {
+                    let j = bb.0.trailing_zeros() as usize;
+                    bb.0 &= bb.0 -1;
 
-                for j in 0..64 {
-                    if basic_moves.0 & (1 << j) != 0 {
-                        moves.push(Move::Basic {
-                            source: Square::from_idx(i),
-                            destination: Square::from_idx(j),
-                        });
-                        continue;
-                    }
-                }
-
-                for j in 0..64 {
-                    if captures.0 & (1 << j) != 0 {
-                        let captured_piece = self.get_piece(Square::from_idx(j));
-                        if let Some(capture) = captured_piece {
-                            moves.push(Move::Capture {
-                                source: Square::from_idx(i),
-                                destination: Square::from_idx(j),
-                                capture,
-                            });
+                    if (self.enemy(side_to_move) & Bitboard(1 << j)).0 != 0 {
+                        if let Some(capture) = self.get_piece(Square::from_idx(j)) {
+                            moves.push(Move::Capture { source: Square::from_idx(i), destination: Square::from_idx(j), capture });
                         }
+                    }else if self.occupied() & Bitboard(1 << j) == Bitboard(0) {
+                        moves.push(Move::Basic { source: Square::from_idx(i), destination: Square::from_idx(j) });
                     }
                 }
+
+
             }
         }
         moves
@@ -412,6 +401,8 @@ impl Display for Bitboard {
         Ok(())
     }
 }
+
+    
 impl BitOrAssign for Bitboard {
     fn bitor_assign(&mut self, rhs: Self) {
         self.0 |= rhs.0;

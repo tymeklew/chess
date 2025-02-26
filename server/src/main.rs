@@ -34,9 +34,6 @@ impl AppState {
     }
 
     pub fn add_player(&self , sock : WebSocket) {
-        self.lobby.lock().unwrap().enqueue(sock);
-
-        let sock = self.lobby.lock().unwrap().dequeue().unwrap();
         let game = BotGame::new(sock);
 
         tokio::spawn(async move { game.start().await });
@@ -70,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
     let state = Arc::new(AppState::new(pool , Lobby::new()));
 
     let app = Router::new()
-        .route("/api/bot", any(ws_handler))
+        .route("/api/ws/bot", any(ws_handler))
         .route("/api/friends/request", post(friends::friend_request))
         .route(
             "/api/friends/response",

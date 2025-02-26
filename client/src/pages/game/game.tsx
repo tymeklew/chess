@@ -1,7 +1,10 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Board, ChatBox } from "../../components";
 import { GiCrossedPistols, GiFlyingFlag, GiChessKing } from "react-icons/gi";
+import { Move, Piece } from "../shared/interfaces";
 import "./game.css";
+import { Colour, PieceType } from "../shared/enum";
+import DEFAULT_BOARD from "../shared/const";
 
 enum Status {
   Disconnected,
@@ -9,39 +12,64 @@ enum Status {
   Connected,
 }
 
-enum Colour {
-  Black,
-  White,
-}
-
-interface Pieces {
-  colour: Colour;
-  position: [number, number];
-}
-
+const ALPHABET = "abcdefgh";
 export default function Game() {
   const [messages, setMessages] = useState<string[]>([]);
   const [webSock, setWebSock] = useState<WebSocket>();
   const [status, setStatus] = useState<Status>(Status.Disconnected);
-  const [pieces, setPieces] = useState<Pieces[]>([]);
+  const [board , setBoard] = useState<(Piece | null)[][]>([]);
+  const [activeSquare , setActiveSquare] = useState<[number , number] | null>(null);
+  const [legalMoves , setLegalMoves] = useState<Move[]>([]);
+
+  useEffect(() => {
+    setBoard(DEFAULT_BOARD)
+  } , []);
 
   function handleButtonClick() {
     setStatus(Status.Connecting);
-    const socket = new WebSocket("/api/ws");
+    const socket = new WebSocket("ws://localhost:5173/api/ws/bot");
     setWebSock(socket);
     // Connection opened
     socket.onopen = () => {
+      setBoard(DEFAULT_BOARD);
       setStatus(Status.Connected);
+
+      socket.send(JSON.stringify({type : "legal"}))
     };
     socket.onclose = () => setStatus(Status.Disconnected);
 
     socket.onmessage = handleMessage;
   }
 
-  function handleMessage(evt) {
-    switch (evt.type) {
+  function sendMove(mv : Move) {
+    console.log(mv);
+    webSock?.send(JSON.stringify({type : "move" , data : `${ALPHABET[mv.from[0]]}${8 - mv.from[1]}${ALPHABET[mv.to[0]]}${8 - mv.to[1]}`}));
+  }
+
+  function handleMessage(evt : any) {
+    let msg = JSON.parse(evt.data);
+    console.log(msg);
+    switch (msg.type) {
       case "CHAT":
         setMessages([...messages , evt.data]);
+        break;
+      case "legal_moves":
+
+      console.log(msg.data);
+      let legalMoves : Move[] = [];
+        (msg.data.split(",")).forEach(element => {
+            let from = element.substring(0,2);
+            let to = element.substring(2,4); 
+
+            let fromX = ALPHABET.indexOf(from[0]);
+            let fromY = 8 - parseInt(from[1]);
+            let toX = ALPHABET.indexOf(to[0]);
+            let toY = 8 - parseInt(to[1]);
+
+            legalMoves.push({from : [fromX , fromY] , to : [toX , toY]});
+        });
+
+        setLegalMoves(legalMoves);
         break;
     }
   }
@@ -68,7 +96,7 @@ export default function Game() {
   return (
     <div className="game-container">
       <div className="board-container">
-        <Board />
+        <Board board={board} moves={legalMoves} setActiveSquare={setActiveSquare} activeSquare={activeSquare} sendMove={sendMove}/>
         <div className="info-container">
           {getStatus()}
           <button onClick={handleButtonClick}>
