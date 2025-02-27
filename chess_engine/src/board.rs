@@ -3,13 +3,14 @@ use crate::moves::Move;
 use crate::pieces::{Pieces, Sides, ALL_PIECES, ALL_SIDES, PIECES_COUNT, SIDES_COUNT};
 use crate::square::Square;
 use core::panic;
+use std::borrow::BorrowMut;
 use std::fmt::Display;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
 #[derive(Clone)]
 pub enum CastlingSide {
     KingSide,
-    QueenSide
+    QueenSide,
 }
 
 #[derive(Clone)]
@@ -60,7 +61,9 @@ impl Board {
                 let idx = i * 8 + j;
                 if Bitboard(1 << idx) & occupied != Bitboard(0) {
                     let piece = self.get_piece(Square::from_idx(idx));
-                    if piece.is_none() { continue; };
+                    if piece.is_none() {
+                        continue;
+                    };
                     let piece = piece.unwrap();
                     print!(
                         "{}",
@@ -151,8 +154,7 @@ impl Board {
 
     // Universal chess interface
     // Example: e2e4
-    pub fn move_from_uci(&self, input: &str) -> Option<Move>
-    {
+    pub fn move_from_uci(&self, input: &str) -> Option<Move> {
         match input.len() {
             4 => {
                 let chunks: Vec<String> = input
@@ -259,7 +261,7 @@ impl Board {
         for piece in ALL_PIECES {
             for i in 0..64 {
                 if (self.pieces[side_to_move][piece] & Bitboard(1 << i)).0 == 0 {
-                    continue
+                    continue;
                 }
 
                 let mut bb = match piece {
@@ -268,11 +270,15 @@ impl Board {
                             Sides::White => step_attacks(i, &WHITE_PAWN_DELTAS),
                             Sides::Black => step_attacks(i, &BLACK_PAWN_DELTAS),
                         };
-                        bb & self.enemy(side_to_move) | (pawn_moves(i, side_to_move, occupied) & !self.occupied()) 
+                        bb & self.enemy(side_to_move)
+                            | (pawn_moves(i, side_to_move, occupied) & !self.occupied())
                     }
                     Pieces::Rook => sliding_attacks(i, occupied, &ROOK_RAY_INDEX),
                     Pieces::Bishop => sliding_attacks(i, occupied, &BISHOP_RAY_INDEX),
-                    Pieces::Queen => sliding_attacks(i, occupied, &ROOK_RAY_INDEX) | sliding_attacks(i, occupied, &BISHOP_RAY_INDEX),
+                    Pieces::Queen => {
+                        sliding_attacks(i, occupied, &ROOK_RAY_INDEX)
+                            | sliding_attacks(i, occupied, &BISHOP_RAY_INDEX)
+                    }
                     Pieces::King => step_attacks(i, &KING_DELTAS),
                     Pieces::Knight => step_attacks(i, &KNIGHT_DELTAS),
                 };
@@ -283,18 +289,60 @@ impl Board {
 
                 while bb.0 != 0 {
                     let j = bb.0.trailing_zeros() as usize;
-                    bb.0 &= bb.0 -1;
+                    bb.0 &= bb.0 - 1;
+
+                    if piece == Pieces::Pawn {
+                        let promotion_row = match side_to_move {
+                            Sides::White => WHITE_PROMOTION_ROW,
+                            Sides::Black => BLACK_PROMOTION_ROW,
+                        };
+
+                        // Promotion can be capture or move
+                        if promotion_row & Bitboard(1 << j) != Bitboard(0) {
+                            if let Some(piece) = self.get_piece(Square::from_idx(j)) {
+                                for promotion_piece in
+                                    [Pieces::Queen, Pieces::Rook, Pieces::Bishop, Pieces::Knight]
+                                        .iter()
+                                {
+                                    moves.push(Move::Promotion {
+                                        source: Square::from_idx(i),
+                                        destination: Square::from_idx(j),
+                                        capture: Some(piece),
+                                        promotion_piece: *promotion_piece,
+                                    });
+                                }
+                                continue;
+                            }
+
+                            for promotion_piece in
+                                [Pieces::Queen, Pieces::Rook, Pieces::Bishop, Pieces::Knight].iter()
+                            {
+                                moves.push(Move::Promotion {
+                                    source: Square::from_idx(i),
+                                    destination: Square::from_idx(j),
+                                    capture: None,
+                                    promotion_piece: *promotion_piece,
+                                });
+                            }
+                            continue;
+                        }
+                    }
 
                     if (self.enemy(side_to_move) & Bitboard(1 << j)).0 != 0 {
                         if let Some(capture) = self.get_piece(Square::from_idx(j)) {
-                            moves.push(Move::Capture { source: Square::from_idx(i), destination: Square::from_idx(j), capture });
+                            moves.push(Move::Capture {
+                                source: Square::from_idx(i),
+                                destination: Square::from_idx(j),
+                                capture,
+                            });
                         }
-                    }else if self.occupied() & Bitboard(1 << j) == Bitboard(0) {
-                        moves.push(Move::Basic { source: Square::from_idx(i), destination: Square::from_idx(j) });
+                    } else if self.occupied() & Bitboard(1 << j) == Bitboard(0) {
+                        moves.push(Move::Basic {
+                            source: Square::from_idx(i),
+                            destination: Square::from_idx(j),
+                        });
                     }
                 }
-
-
             }
         }
         moves
@@ -402,7 +450,6 @@ impl Display for Bitboard {
     }
 }
 
-    
 impl BitOrAssign for Bitboard {
     fn bitor_assign(&mut self, rhs: Self) {
         self.0 |= rhs.0;

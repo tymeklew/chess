@@ -2,6 +2,7 @@ mod attacks;
 mod board;
 mod bot;
 mod game;
+mod heuristics;
 mod moves;
 mod pieces;
 mod square;
@@ -17,7 +18,22 @@ mod tests {
     use crate::{board::Board, bot::evaluate, bot_move, ChessGame, Sides};
 
     #[test]
-    fn promotion() {}
+    fn promotion() {
+        let fen = String::from("1b6/P6k/8/8/8/8/8/K7 w - - 0 1");
+        let mut board = Board::from_fen(fen);
+
+        /*for mv in board.legal_moves(Sides::White) {
+            println!("Promotions : {}", mv);
+            println!("Before : ");
+            board.display();
+            mv.apply(&mut board);
+            println!("After");
+            board.display();
+            mv.undo(&mut board);
+            println!("Undo");
+            board.display();
+        }*/
+    }
 
     #[test]
     fn checkmate() {
@@ -44,7 +60,7 @@ mod tests {
     fn capture() {
         let fen = String::from("8/8/4k3/8/6N1/2R1n3/3P1B2/K1Q2b2 w - - 0 1");
         let board = Board::from_fen(fen);
-        board.display();
+        //board.display();
 
         for mv in board.legal_moves(Sides::White) {
             //println!("{}", mv);
@@ -56,30 +72,7 @@ mod tests {
         let game = ChessGame::new();
         let str = "e2e3";
         let mv = game.move_from_uci(str);
-        
 
         //println!("{:?}", mv);
-    }
-
-    #[test]
-    fn it_works() {
-        let mut game = ChessGame::new();
-        game.board().display();
-        loop {
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input).unwrap();
-            let mv = game.move_from_uci(&input.trim()).unwrap();
-            game.mv(mv);
-            game.board().display();
-
-            println!("\n\n\n\n\n\n\n\n");
-            let bot = bot_move(&mut game.board(), 1, crate::Sides::Black);
-            let mv = bot.1.unwrap();
-            println!("Score : {} : {}" , bot.0 , mv);
-            game.mv(mv);
-            game.board().display();
-
-
-        }
     }
 }

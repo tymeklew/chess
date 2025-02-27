@@ -43,7 +43,12 @@ export default function Game() {
 
   function sendMove(mv : Move) {
     console.log(mv);
+    let temp = board;
+    temp[mv.to[1]][mv.to[0]] = temp[mv.from[1]][mv.from[0]];
+    temp[mv.from[1]][mv.from[0]] = null;
+    setBoard(temp);
     webSock?.send(JSON.stringify({type : "move" , data : `${ALPHABET[mv.from[0]]}${8 - mv.from[1]}${ALPHABET[mv.to[0]]}${8 - mv.to[1]}`}));
+    webSock?.send(JSON.stringify({type : "legal"}))
   }
 
   function handleMessage(evt : any) {
@@ -71,11 +76,21 @@ export default function Game() {
 
         setLegalMoves(legalMoves);
         break;
+        case "move":
+          let move = msg.data;
+          let from = move.substring(0,2);
+          let to = move.substring(2,4);
+          let fromX = ALPHABET.indexOf(from[0]);
+          let fromY = 8 - parseInt(from[1]);
+          let toX = ALPHABET.indexOf(to[0]);
+          let toY = 8 - parseInt(to[1]);
+
+          let temp = board;
+          temp[toY][toX] = temp[fromY][fromX];
+          temp[fromY][fromX] = null;
+          setBoard(temp);
+          break;
     }
-  }
-
-  function updateBoard(data: string) {
-
   }
 
   function sendMessage(msg: string) {

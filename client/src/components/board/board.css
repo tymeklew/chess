@@ -47,6 +47,9 @@
     height: 75%;
     object-fit: contain;
     cursor: pointer;
+    -moz-user-select: none;
+-webkit-user-select: none;
+    user-select: none;
 }
 
 .highlight {

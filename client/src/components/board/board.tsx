@@ -15,7 +15,6 @@ const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 export default function Board(props : BoardProps) {
   //t Make text numbering and lettering inverted
   useEffect(() => {
-    console.log(props.activeSquare);
   } , [props.activeSquare]);
 
   function handleTileClick( i : number , j : number , piece : Piece | null) {
@@ -31,6 +30,7 @@ export default function Board(props : BoardProps) {
           props.sendMove(move);
         }
       }
+      props.setActiveSquare(null);
     }
   }
   return (

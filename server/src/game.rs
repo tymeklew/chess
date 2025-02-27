@@ -1,6 +1,7 @@
 use axum::extract::ws::{Message, WebSocket};
 use chess_engine::{bot_move, ChessGame, Sides, Square};
 use futures::StreamExt;
+use log::info;
 use serde::{Deserialize, Serialize};
 use futures::SinkExt;
 
@@ -15,7 +16,7 @@ pub struct BotGame {
     sock : WebSocket
 }
 
-const BOT_DIFFICULTY : usize = 4;
+const BOT_DIFFICULTY : usize = 5;
 impl BotGame {
     pub fn new(sock : WebSocket) -> Self {
         Self { sock , game : ChessGame::new() }
@@ -59,8 +60,19 @@ impl Game for BotGame {
                         if let Some(mv) = mv {
                            self.game.mv(mv); 
 
-                           let bot_mv = bot_move(&mut self.game.board(), BOT_DIFFICULTY, chess_engine::Sides::White).1.unwrap();
-                            self.game.mv(bot_mv);
+                           let bot_mv = bot_move(&mut self.game.board(), BOT_DIFFICULTY, chess_engine::Sides::Black).1.unwrap();
+                            self.game.mv(bot_mv.clone());
+
+                            let response = Communication {
+                                _type : "move".to_string(),
+                                data : Some(bot_mv.into_uci())
+                            };
+
+                            let response = serde_json::to_string(&response).unwrap();
+                            sender.send(Message::Text(response)).await.unwrap();
+                            println!("Send bot move");
+
+
                         }
 
 

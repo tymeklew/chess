@@ -1,18 +1,18 @@
 use crate::board::Board;
 use crate::{Move, Sides};
 
-#[derive(Clone, Copy , PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum GameStatus {
     InProgress,
     // Side is winning side
     Checkmate(Sides),
-    Statemate
+    Statemate,
 }
 
 pub struct ChessGame {
     turn: Sides,
     board: Board,
-    status : GameStatus
+    status: GameStatus,
 }
 
 impl ChessGame {
@@ -20,7 +20,7 @@ impl ChessGame {
         ChessGame {
             board: Board::new(),
             turn: Sides::White,
-            status : GameStatus::InProgress,
+            status: GameStatus::InProgress,
         }
     }
 
@@ -28,8 +28,7 @@ impl ChessGame {
         self.status
     }
 
-    pub fn mv(&mut self, m: Move)
-    {
+    pub fn mv(&mut self, m: Move) {
         if self.status != GameStatus::InProgress {
             return;
         }
@@ -37,20 +36,20 @@ impl ChessGame {
         self.turn = self.turn.other();
 
         if self.board.is_checkmate(self.turn) {
+            println!("Checkmate : {:?}", { self.turn });
             self.status = GameStatus::Checkmate(self.turn);
         } else if self.board.is_stalemate(self.turn) {
             self.status = GameStatus::Statemate;
         }
     }
-    pub fn move_from_uci(&self, input: &str) -> Option<Move>
-    {
+    pub fn move_from_uci(&self, input: &str) -> Option<Move> {
         self.board.move_from_uci(input)
     }
     pub fn board(&self) -> &Board {
         &self.board
     }
 
-    pub fn legal_moves(&self , side : Sides) -> Vec<Move> {
+    pub fn legal_moves(&self, side: Sides) -> Vec<Move> {
         self.board.legal_moves(side)
     }
 }

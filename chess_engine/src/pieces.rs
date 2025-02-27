@@ -50,6 +50,16 @@ impl Pieces {
             Self::King => RELATIVE_KING_STRENGTH,
         }
     }
+    pub fn to_uci(&self) -> char {
+        match self {
+            Self::Pawn => 'p',
+            Self::Rook => 'r',
+            Self::Knight => 'n',
+            Self::Bishop => 'b',
+            Self::Queen => 'q',
+            Self::King => 'k',
+        }
+    }
 }
 
 impl Display for Pieces {
