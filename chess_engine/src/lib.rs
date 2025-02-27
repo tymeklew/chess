@@ -75,4 +75,12 @@ mod tests {
 
         //println!("{:?}", mv);
     }
+
+    #[test]
+    fn real() {
+        let game = ChessGame::new();
+
+let mv =         bot_move(&game.board(), 2, Sides::Black);
+println!("{}" , mv.1.unwrap());
+    }
 }

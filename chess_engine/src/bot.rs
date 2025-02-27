@@ -2,7 +2,6 @@ use std::i32;
 
 use crate::{
     board::Board,
-    heuristics::PAWN_TABLE,
     moves::Move,
     pieces::{Pieces, Sides},
 };
@@ -17,18 +16,6 @@ pub fn evaluate(board: &Board, side: Sides) -> i32 {
 
     if board.is_checkmate(side.other()) {
         return sign * i32::MAX;
-    }
-    // Pawn Structure
-    let mut pawn_structure = 0;
-    let mut temp = board.pieces[side][Pieces::Pawn];
-    while temp.0 != 0 {
-        let index = temp.0.trailing_zeros() as usize;
-
-        pawn_structure += match side {
-            Sides::White => PAWN_TABLE[index / 8][index % 8],
-            Sides::Black => PAWN_TABLE[7 - index / 8][index % 8],
-        };
-        temp.0 &= temp.0 - 1;
     }
 
     // Claude Shannon's evaluation function
@@ -52,7 +39,7 @@ pub fn evaluate(board: &Board, side: Sides) -> i32 {
                 * (board.count_piece(Sides::White, Pieces::Pawn)
                     - board.count_piece(Sides::Black, Pieces::Pawn)));
 
-    material + (pawn_structure)
+    material 
 }
 
 pub fn bot_move(board: &Board, depth: usize, side: Sides) -> (i32, Option<Move>) {
@@ -130,6 +117,7 @@ pub fn mini(
         }
         //println!("Score : {} , move : {}" , evaluate(board, side) , mv);
         let (score, _) = maxi(board, depth - 1, side.other(), alpha, beta);
+        println!("Move: {}, Eval: {}", mv, evaluate(board, side.other()));
         mv.undo(board);
 
         if score < min {
