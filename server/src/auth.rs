@@ -6,8 +6,6 @@ use axum::{extract::State, http::StatusCode, Json};
 use axum::{Extension, RequestPartsExt};
 use axum_extra::extract::{cookie::Cookie, CookieJar};
 use bcrypt::{hash, DEFAULT_COST};
-use lazy_static::lazy_static;
-use regex::Regex;
 use serde::Deserialize;
 use sqlx::query;
 use sqlx::Row;

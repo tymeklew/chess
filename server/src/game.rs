@@ -16,7 +16,7 @@ pub struct BotGame {
     sock : WebSocket
 }
 
-const BOT_DIFFICULTY : usize = 5;
+const BOT_DIFFICULTY : usize = 3;
 impl BotGame {
     pub fn new(sock : WebSocket) -> Self {
         Self { sock , game : ChessGame::new() }
@@ -65,7 +65,7 @@ impl Game for BotGame {
 
                             let response = Communication {
                                 _type : "move".to_string(),
-                                data : Some(bot_mv.into_uci())
+                                data : Some(bot_mv.into_uci(Sides::Black))
                             };
 
                             let response = serde_json::to_string(&response).unwrap();
@@ -77,10 +77,9 @@ impl Game for BotGame {
 
 
                     },
-                    "draw" => {},
                     "legal" => {
                         let mvs = self.game.legal_moves(Sides::White);
-                        let legal_moves = mvs.iter().map(|m| m.into_uci()).collect::<Vec<String>>().join(",");
+                        let legal_moves = mvs.iter().map(|m| m.into_uci(Sides::White)).collect::<Vec<String>>().join(",");
 
                         let response = Communication {
                             _type : "legal_moves".to_string(),
@@ -109,4 +108,9 @@ impl Game for BotGame {
    Legal Moves
    type : "legal_moves"
    data : "e4e5,"
+
+   type : "game_over"
+   // How the game ended , checkmate, stalemate, draw
+   // Who won , white, black
+   data : "checkmate,white"
 */
