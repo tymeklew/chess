@@ -2,7 +2,6 @@ mod attacks;
 mod board;
 mod bot;
 mod game;
-mod heuristics;
 mod moves;
 mod pieces;
 mod square;
@@ -11,6 +10,7 @@ pub use bot::bot_move;
 pub use game::ChessGame;
 pub use moves::Move;
 pub use pieces::Sides;
+pub use game::GameStatus;
 pub use square::Square;
 
 #[cfg(test)]

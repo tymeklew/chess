@@ -1,0 +1,13 @@
+.promotion {
+    position: absolute;
+    top: 30%;
+    z-index: 9999;
+    outline: none;
+    border: none;
+    padding: 0px;
+}
+
+
+.promotion-button {
+    transition: all ease-in-out 0.5s;
+}

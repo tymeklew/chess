@@ -124,7 +124,7 @@ impl Move {
                 destination,
                 match side {
                     Sides::White => promotion_piece.to_uci().to_ascii_uppercase(),
-                    Sides::Black => promotion_piece.to_uci(),
+                    Sides::Black => promotion_piece.to_uci().to_ascii_lowercase(),
                 }
             ),
             _ => todo!(),

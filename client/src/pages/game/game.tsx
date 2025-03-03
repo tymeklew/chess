@@ -1,10 +1,11 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Board, ChatBox } from "../../components";
-import { GiCrossedPistols, GiFlyingFlag, GiChessKing } from "react-icons/gi";
-import { Move, Piece } from "../shared/interfaces";
+import { GiCrossedPistols, GiFlyingFlag, GiChessKing , GiRobotAntennas , GiPerson } from "react-icons/gi";
+import { fromUCI, Move, Piece, toUCI } from "../shared/interfaces";
 import "./game.css";
 import { Colour, PieceType } from "../shared/enum";
 import DEFAULT_BOARD from "../shared/const";
+import Promotion from "../../components/promotion/promotion";
 
 enum Status {
   Disconnected,
@@ -42,60 +43,29 @@ export default function Game() {
   }
 
   function sendMove(mv : Move) {
-    console.log(mv);
-    let temp = board;
-    temp[mv.to[1]][mv.to[0]] = temp[mv.from[1]][mv.from[0]];
-    temp[mv.from[1]][mv.from[0]] = null;
-    setBoard(temp);
-    webSock?.send(JSON.stringify({type : "move" , data : `${ALPHABET[mv.from[0]]}${8 - mv.from[1]}${ALPHABET[mv.to[0]]}${8 - mv.to[1]}`}));
-    webSock?.send(JSON.stringify({type : "legal"}))
+    console.log(toUCI(mv));
+    webSock?.send(JSON.stringify({type : "move" , move : toUCI(mv)}))
   }
 
-  function handleMessage(evt : any) {
+  function handleMessage(evt : any) { 
+    console.log(evt);
     let msg = JSON.parse(evt.data);
-    console.log(msg);
     switch (msg.type) {
-      case "CHAT":
-        setMessages([...messages , evt.data]);
+      case "move":
+        let move = fromUCI(msg.data);
+        let temp = board;
+        temp[move.to[1]][move.to[0]] = temp[move.from[1]][move.from[0]];
+        temp[move.from[1]][move.from[0]] = null;
+        setBoard(temp);
         break;
       case "legal_moves":
-
-      console.log(msg.data);
-      let legalMoves : Move[] = [];
-        (msg.data.split(",")).forEach(element => {
-            let from = element.substring(0,2);
-            let to = element.substring(2,4); 
-
-            let fromX = ALPHABET.indexOf(from[0]);
-            let fromY = 8 - parseInt(from[1]);
-            let toX = ALPHABET.indexOf(to[0]);
-            let toY = 8 - parseInt(to[1]);
-
-            legalMoves.push({from : [fromX , fromY] , to : [toX , toY]});
-        });
-
-        setLegalMoves(legalMoves);
+        let mvs = msg.data.split(",").map((move : string) => fromUCI(move)); 
+        console.log(mvs);
+        setLegalMoves(mvs);
         break;
-        case "move":
-          let move = msg.data;
-          let from = move.substring(0,2);
-          let to = move.substring(2,4);
-          let fromX = ALPHABET.indexOf(from[0]);
-          let fromY = 8 - parseInt(from[1]);
-          let toX = ALPHABET.indexOf(to[0]);
-          let toY = 8 - parseInt(to[1]);
-
-          let temp = board;
-          temp[toY][toX] = temp[fromY][fromX];
-          temp[fromY][fromX] = null;
-          setBoard(temp);
-          break;
     }
-  }
+}
 
-  function sendMessage(msg: string) {
-    webSock?.send(msg); 
-  }
 
   function getStatus(): ReactNode {
     switch (status) {
@@ -126,7 +96,7 @@ export default function Game() {
             {" "}
             Resign <GiFlyingFlag />{" "}
           </button>
-          <ChatBox messages={messages} sendMessage={sendMessage} />
+          {/*<ChatBox messages={messages} sendMessage={sendMessage} />*/}
         </div>
       </div>
       {/*<ChatBox messages={messages} sendMessage={sendMessage} />*/}

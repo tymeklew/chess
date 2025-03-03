@@ -2,6 +2,8 @@ import { Move, Piece } from "../../pages/shared/interfaces";
 import WhiteRook from "../../assets/white_rook.png";
 import "./board.css";
 import React, { useEffect } from "react";
+import Promotion from "../promotion/promotion";
+import { Colour } from "../../pages/shared/enum";
 
 interface BoardProps {
   board: (Piece | null)[][];
@@ -13,6 +15,7 @@ interface BoardProps {
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 export default function Board(props : BoardProps) {
+  const dialog = React.useRef<HTMLDialogElement>(null);
   //t Make text numbering and lettering inverted
   useEffect(() => {
   } , [props.activeSquare]);
@@ -35,13 +38,14 @@ export default function Board(props : BoardProps) {
   }
   return (
     <div className="board">
+      <Promotion colour={Colour.White} ref={dialog}/>
       {props.board.map((row, i) => {
         return row.map((piece, j) => {
           let isActiveSquare = i == props.activeSquare?.[0] && j == props.activeSquare?.[1];
           return <div key={`${i}-${j}`} className={`tile tile-${(i + j) % 2 == 0 ? 'light' : 'dark'} ${isActiveSquare ? 'active' : ''} `} onClick={() => handleTileClick(i , j , piece)}>
             {j == 0 ? <p className="upper-number numbering">{ 8 - i}</p> : ""}
             {i == 7 ? <p className="lower-letter numbering">{ALPHABET[j]}</p> : ""}
-            {piece == null ? "" : <img className="piece" src={`/assets/${piece.colour}_${piece.type}.png`} alt="white rook" />}
+            {piece == null ? "" : <img className="piece" src={`/assets/${piece.colour}_${piece.type}.png`} alt="Piece" />}
             { props.activeSquare && props.moves.some(move => move.to[0] == j && move.to[1] == i && move.from[1] == props.activeSquare?.[0] && move.from[0] == props.activeSquare?.[1] ) ? <div className="highlight"></div> : ""}
           </div>;
       });
