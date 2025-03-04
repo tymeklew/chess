@@ -21,6 +21,7 @@ export default function Game() {
   const [board , setBoard] = useState<(Piece | null)[][]>([]);
   const [activeSquare , setActiveSquare] = useState<[number , number] | null>(null);
   const [legalMoves , setLegalMoves] = useState<Move[]>([]);
+  const [promotionPiece , setPromotionPiece] = useState<PieceType | null>(null);
 
   useEffect(() => {
     setBoard(DEFAULT_BOARD)
@@ -43,12 +44,15 @@ export default function Game() {
   }
 
   function sendMove(mv : Move) {
-    console.log(toUCI(mv));
-    webSock?.send(JSON.stringify({type : "move" , move : toUCI(mv)}))
+    let temp = board;
+    temp[mv.to[1]][mv.to[0]] = temp[mv.from[1]][mv.from[0]];
+    temp[mv.from[1]][mv.from[0]] = null;
+    setBoard(temp);
+    webSock?.send(JSON.stringify({type : "move" , data : toUCI(mv)}))
+    webSock?.send(JSON.stringify({type : "legal"}))
   }
 
   function handleMessage(evt : any) { 
-    console.log(evt);
     let msg = JSON.parse(evt.data);
     switch (msg.type) {
       case "move":
@@ -81,7 +85,7 @@ export default function Game() {
   return (
     <div className="game-container">
       <div className="board-container">
-        <Board board={board} moves={legalMoves} setActiveSquare={setActiveSquare} activeSquare={activeSquare} sendMove={sendMove}/>
+        <Board board={board} moves={legalMoves} setActiveSquare={setActiveSquare} activeSquare={activeSquare} sendMove={sendMove} setPromotionPiece={setPromotionPiece}/>
         <div className="info-container">
           {getStatus()}
           <button onClick={handleButtonClick}>
