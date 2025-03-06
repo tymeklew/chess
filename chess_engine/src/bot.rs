@@ -117,7 +117,6 @@ pub fn mini(
         }
         //println!("Score : {} , move : {}" , evaluate(board, side) , mv);
         let (score, _) = maxi(board, depth - 1, side.other(), alpha, beta);
-        println!("Move: {}, Eval: {}", mv, evaluate(board, side.other()));
         mv.undo(board);
 
         if score < min {

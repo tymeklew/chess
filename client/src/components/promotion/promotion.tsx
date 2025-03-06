@@ -7,10 +7,13 @@ interface PromotionProps {
 
 const PROMOTION_PIECES = [PieceType.Queen , PieceType.Rook , PieceType.Bishop , PieceType.Knight];
 export default function Promotion(props : PromotionProps) {
-   return <dialog className="promotion">
-        <form> 
+    function handleSubmit() {
+
+    }
+   return <dialog className="promotion" open>
+        <form onSubmit={handleSubmit}> 
             {PROMOTION_PIECES.map(piece => {
-                return <button key={piece} className="promotion-button"> 
+                return <button key={piece} className="promotion-button" type="submit"> 
                     <img src={`/assets/${props.colour}_${piece}.png`} className="piece"/>
                 </button>
             })}

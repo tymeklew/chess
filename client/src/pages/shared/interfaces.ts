@@ -15,7 +15,7 @@ const ALPHABET = "abcdefgh";
 function toUCI(move : Move) {
   let from = `${ALPHABET[move.from[0]]}${8 - move.from[1]}`;
   let to = `${ALPHABET[move.to[0]]}${8 - move.to[1]}`;
-  return `${from}${to}${move.promotion ? move.promotion[0] : ""}`;
+  return `${from}${to}${move.promotion ? move.promotion[0].toUpperCase() : ""}`;
 }
 
 function fromUCI(uci : string) : Move {
@@ -26,16 +26,16 @@ function fromUCI(uci : string) : Move {
 
   if (uci.length == 5) {
       switch (uci[4]) {
-          case "q":
+          case "Q":
               promotion = PieceType.Queen;
               break;
-          case "r":
+          case "R":
               promotion = PieceType.Rook;
               break;
-          case "b":
+          case "B":
               promotion = PieceType.Bishop;
               break;
-          case "n":
+          case "N":
               promotion = PieceType.Knight;
               break;
           default:

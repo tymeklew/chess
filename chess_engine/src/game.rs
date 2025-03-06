@@ -13,6 +13,7 @@ pub struct ChessGame {
     turn: Sides,
     board: Board,
     status: GameStatus,
+    history : Vec<Move>
 }
 
 impl ChessGame {
@@ -21,6 +22,7 @@ impl ChessGame {
             board: Board::new(),
             turn: Sides::White,
             status: GameStatus::InProgress,
+            history : Vec::new(),
         }
     }
 
@@ -33,10 +35,19 @@ impl ChessGame {
             return;
         }
         m.apply(&mut self.board);
+        self.history.push(m);
         self.turn = self.turn.other();
+        // Check if the game is over
+        self.update_status();
+    }
 
+    pub fn history(&self) -> Vec<Move> {
+        self.history.clone()
+    }
+
+    pub fn update_status(&mut self) {
         if self.board.is_checkmate(self.turn) {
-            println!("Checkmate : {:?}", { self.turn });
+            println!("Checkmate");
             self.status = GameStatus::Checkmate(self.turn);
         } else if self.board.is_stalemate(self.turn) {
             self.status = GameStatus::Statemate;

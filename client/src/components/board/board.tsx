@@ -28,8 +28,6 @@ export default function Board(props : BoardProps) {
       if (props.activeSquare) {
         let move = props.moves.find(move => move.from[0] == props.activeSquare?.[1] && move.from[1] == props.activeSquare?.[0] && move.to[0] == j && move.to[1] == i);
         if (move) {
-          // Send move to server
-          console.log(move);
           props.setActiveSquare(null);
           props.sendMove(move);
         }
@@ -39,7 +37,6 @@ export default function Board(props : BoardProps) {
   }
   return (
     <div className="board">
-      <Promotion colour={Colour.White} setPromotionPiece={props.setPromotionPiece}/>
       {props.board.map((row, i) => {
         return row.map((piece, j) => {
           let isActiveSquare = i == props.activeSquare?.[0] && j == props.activeSquare?.[1];

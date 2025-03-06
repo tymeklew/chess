@@ -1,16 +1,14 @@
 use axum::extract::ws::{Message, WebSocket};
-use chess_engine::{bot_move, ChessGame, Sides, Square};
+use chess_engine::{bot_move, ChessGame, GameStatus, Sides};
 use futures::StreamExt;
 use log::info;
 use serde::{Deserialize, Serialize};
 use futures::SinkExt;
 
 pub trait Game {
-
     async fn start(self);
 }
 
-pub struct PlayerGame {}
 pub struct BotGame {
     game : ChessGame,
     sock : WebSocket
@@ -60,6 +58,18 @@ impl Game for BotGame {
                         if let Some(mv) = mv {
                            self.game.mv(mv); 
 
+                           if let GameStatus::Checkmate(_) = self.game.status() {
+                               let response = Communication {
+                                 _type : "game_over".to_string(),
+                                 data : Some(format!("checkmate,white"))
+                               };
+
+                               let txt = serde_json::to_string(&response).unwrap();
+                               sender.send(Message::Text(txt)).await.unwrap();
+                               info!("Game over");
+                               break;
+                           }
+
                            let bot_mv = bot_move(&mut self.game.board(), BOT_DIFFICULTY, chess_engine::Sides::Black).1.unwrap();
                             self.game.mv(bot_mv.clone());
 
@@ -72,7 +82,17 @@ impl Game for BotGame {
                             sender.send(Message::Text(response)).await.unwrap();
                             println!("Send bot move");
 
-
+                            if let GameStatus::Checkmate(_) = self.game.status() {
+                                let response = Communication {
+                                  _type : "game_over".to_string(),
+                                  data : Some(format!("checkmate,white"))
+                                };
+ 
+                                let txt = serde_json::to_string(&response).unwrap();
+                                sender.send(Message::Text(txt)).await.unwrap();
+                                info!("Game over");
+                                break;
+                            }
                         }
 
 
@@ -80,6 +100,7 @@ impl Game for BotGame {
                     "legal" => {
                         let mvs = self.game.legal_moves(Sides::White);
                         let legal_moves = mvs.iter().map(|m| m.into_uci(Sides::White)).collect::<Vec<String>>().join(",");
+                        info!("Legal Moves : {}", legal_moves);
 
                         let response = Communication {
                             _type : "legal_moves".to_string(),

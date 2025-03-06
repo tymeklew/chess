@@ -291,7 +291,7 @@ impl Board {
                     let j = bb.0.trailing_zeros() as usize;
                     bb.0 &= bb.0 - 1;
 
-                    /*if piece == Pieces::Pawn {
+                    if piece == Pieces::Pawn {
                         let promotion_row = match side_to_move {
                             Sides::White => WHITE_PROMOTION_ROW,
                             Sides::Black => BLACK_PROMOTION_ROW,
@@ -326,7 +326,7 @@ impl Board {
                             }
                             continue;
                         }
-                    }*/
+                    }
 
                     if (self.enemy(side_to_move) & Bitboard(1 << j)).0 != 0 {
                         if let Some(capture) = self.get_piece(Square::from_idx(j)) {
