@@ -8,6 +8,7 @@ interface PromotionProps {
 const PROMOTION_PIECES = [PieceType.Queen , PieceType.Rook , PieceType.Bishop , PieceType.Knight];
 export default function Promotion(props : PromotionProps) {
     function handleSubmit() {
+        console.log("Submitted")
 
     }
    return <dialog className="promotion" open>

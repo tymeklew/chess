@@ -1,0 +1,38 @@
+.friends-container {
+
+}
+.inner-friends-container {
+
+}
+.search-result {
+    width : 100%;
+    background-color: #3b414f;    
+    border-radius: 0.2rem;
+    margin: 0.2rem;
+    padding: 0.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.friend-add {
+    cursor: pointer;
+}
+.friend-request {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; 
+    background-color: #3b414f;    
+    border-radius: 0.2rem;
+    padding: 0.1rem;
+    margin: 0.2rem;
+}
+
+.pending {
+    color : yellow;
+}
+.accepted {
+    color : green;
+}
+.rejected {
+    color : red;
+}

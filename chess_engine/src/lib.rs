@@ -78,9 +78,21 @@ mod tests {
 
     #[test]
     fn real() {
-        let game = ChessGame::new();
+        let mut game = ChessGame::new();
+        // Play quickly to test stuff
 
-let mv =         bot_move(&game.board(), 2, Sides::Black);
-println!("{}" , mv.1.unwrap());
+        game.board().display();
+        loop {
+            let mut str = String::new();
+            std::io::stdin().read_line(&mut str).unwrap();
+            let str = str.trim();
+            let mv = game.move_from_uci(str);
+            game.mv(mv.unwrap());
+            game.board().display();
+
+            let mv = bot_move(&game.board(), 3, Sides::Black);
+            game.mv(mv.1.unwrap());
+            game.board().display();
+        }
     }
 }

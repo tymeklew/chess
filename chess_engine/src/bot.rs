@@ -55,7 +55,6 @@ pub fn bot_move(board: &Board, depth: usize, side: Sides) -> (i32, Option<Move>)
 
     x
 }
-
 pub fn maxi(
     board: &mut Board,
     depth: usize,

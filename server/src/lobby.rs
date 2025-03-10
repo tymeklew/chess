@@ -1,21 +1,23 @@
 use axum::extract::ws::WebSocket;
+use std::fmt::Debug;
+use std::fmt::Display;
 // Circular queue
-const MAX_PLAYERS : usize = 10;
-pub struct Lobby {
-    data : [Option<WebSocket> ; MAX_PLAYERS],
-    front : usize,
-    size : usize,
+const MAX_PLAYERS: usize = 10;
+pub struct Lobby<T> {
+    data: [Option<T>; MAX_PLAYERS],
+    front: usize,
+    size: usize,
 }
-impl Lobby {
-    pub fn new() -> Lobby {
+impl<T> Lobby<T> {
+    pub fn new() -> Lobby<T> {
         Lobby {
-            data : [const { None } ; MAX_PLAYERS],
-            front : 0,
-            size : 0,
+            data: [const { None }; MAX_PLAYERS],
+            front: 0,
+            size: 0,
         }
     }
 
-    pub fn enqueue(&mut self , element : WebSocket) {
+    pub fn enqueue(&mut self, element: T) {
         if self.size == MAX_PLAYERS {
             return;
         }
@@ -25,7 +27,7 @@ impl Lobby {
         self.size += 1;
     }
 
-    pub fn dequeue(&mut self) -> Option<WebSocket> {
+    pub fn dequeue(&mut self) -> Option<T> {
         if self.size == 0 {
             return None;
         }
@@ -35,7 +37,7 @@ impl Lobby {
         self.front = (self.front + 1) % MAX_PLAYERS;
         element
     }
-    
+
     pub fn size(&self) -> usize {
         self.size
     }

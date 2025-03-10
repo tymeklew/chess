@@ -1,122 +1,127 @@
 use axum::extract::ws::{Message, WebSocket};
 use chess_engine::{bot_move, ChessGame, GameStatus, Sides};
+use futures::SinkExt;
 use futures::StreamExt;
 use log::info;
 use serde::{Deserialize, Serialize};
-use futures::SinkExt;
+
+use crate::player::Player;
+use crate::AppState;
 
 pub trait Game {
     async fn start(self);
 }
 
-pub struct BotGame {
-    game : ChessGame,
-    sock : WebSocket
+#[derive(Clone , Copy)]
+enum BotDifficulty {
+    Easy = 1,
+    Medium = 2,
+    Hard = 3,
 }
 
-const BOT_DIFFICULTY : usize = 3;
+pub struct BotGame {
+    game: ChessGame,
+    player : Player,
+    pool : sqlx::PgPool,
+    difficulty : BotDifficulty,
+    side : Sides,
+}
+
 impl BotGame {
-    pub fn new(sock : WebSocket) -> Self {
-        Self { sock , game : ChessGame::new() }
+    pub fn new(player: Player , pool : sqlx::PgPool , difficulty : String , side : String) -> Self {
+        let difficulty = match difficulty.as_str() {
+            "easy" => BotDifficulty::Easy,
+            "medium" => BotDifficulty::Medium,
+            "hard" => BotDifficulty::Hard,
+            _ => BotDifficulty::Easy,
+        };
+        let side = match side.as_str() {
+            "white" => Sides::White,
+            "black" => Sides::Black,
+            _ => Sides::White,
+        };
+        Self {
+            player,
+            game: ChessGame::new(),
+            pool,
+            difficulty,
+            side,
+        }
     }
 }
 
 /*
-    // We subscribe *before* sending the "joined" message, so that we will also
-    // display it to our client.
-    let mut rx = state.tx.subscribe();
+   // We subscribe *before* sending the "joined" message, so that we will also
+   // display it to our client.
+   let mut rx = state.tx.subscribe();
 
-    // Now send the "joined" message to all subscribers.
-    let msg = format!("{username} joined.");
-    tracing::debug!("{msg}");
-    let _ = state.tx.send(msg);
- */
+   // Now send the "joined" message to all subscribers.
+   let msg = format!("{username} joined.");
+   tracing::debug!("{msg}");
+   let _ = state.tx.send(msg);
+*/
 
-#[derive(Deserialize , Serialize , Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 struct Communication {
-    #[serde(rename="type")]
-    _type : String,
-    data : Option<String>,
+    #[serde(rename = "type")]
+    _type: String,
+    data: Option<String>,
 }
 //TODO
 impl Game for BotGame {
     async fn start(mut self) {
-        let (mut sender , mut receiver) = self.sock.split();
+        let (mut sender, mut receiver) = self.player.sock.split();
 
-        while let Some(Ok(message)) = receiver.next().await {
-            if let Message::Text(command) = message {
-                log::debug!("Received command: {}", command);
-                let communication: Communication = match serde_json::from_str(&command) {
-                    Ok(comm) => comm,
-                    Err(_) => continue
-                };
-                log::debug!("Parsed command: {:?}", communication);
-
-                match communication._type.as_str() {
-                    "move" => {
-                        let mv = self.game.move_from_uci(&communication.data.unwrap());
-                        if let Some(mv) = mv {
-                           self.game.mv(mv); 
-
-                           if let GameStatus::Checkmate(_) = self.game.status() {
-                               let response = Communication {
-                                 _type : "game_over".to_string(),
-                                 data : Some(format!("checkmate,white"))
-                               };
-
-                               let txt = serde_json::to_string(&response).unwrap();
-                               sender.send(Message::Text(txt)).await.unwrap();
-                               info!("Game over");
-                               break;
-                           }
-
-                           let bot_mv = bot_move(&mut self.game.board(), BOT_DIFFICULTY, chess_engine::Sides::Black).1.unwrap();
-                            self.game.mv(bot_mv.clone());
-
-                            let response = Communication {
-                                _type : "move".to_string(),
-                                data : Some(bot_mv.into_uci(Sides::Black))
-                            };
-
-                            let response = serde_json::to_string(&response).unwrap();
-                            sender.send(Message::Text(response)).await.unwrap();
-                            println!("Send bot move");
-
-                            if let GameStatus::Checkmate(_) = self.game.status() {
-                                let response = Communication {
-                                  _type : "game_over".to_string(),
-                                  data : Some(format!("checkmate,white"))
-                                };
- 
-                                let txt = serde_json::to_string(&response).unwrap();
-                                sender.send(Message::Text(txt)).await.unwrap();
-                                info!("Game over");
-                                break;
-                            }
-                        }
-
-
-                    },
-                    "legal" => {
-                        let mvs = self.game.legal_moves(Sides::White);
-                        let legal_moves = mvs.iter().map(|m| m.into_uci(Sides::White)).collect::<Vec<String>>().join(",");
-                        info!("Legal Moves : {}", legal_moves);
-
-                        let response = Communication {
-                            _type : "legal_moves".to_string(),
-                            data : Some(legal_moves)
-                        };
-
-                        let response = serde_json::to_string(&response).unwrap();
-                        sender.send(Message::Text(response)).await.unwrap();
-
-                    }
-                    _ => {},
-                };
-
-
+        while let Some(Ok(msg)) = receiver.next().await {
+            if self.game.status() != GameStatus::InProgress {
+                break;
             }
+
+            let msg = match msg {
+                Message::Text(text) => text,
+                _ => continue,
+            };
+
+            let communication: Communication = match serde_json::from_str(&msg) {
+                Ok(communication) => communication,
+                Err(_) => continue,
+            };
+
+            match communication._type.as_str() {
+                "move" => {
+                    let mv = communication.data.unwrap();
+                    let mv = self.game.move_from_uci(&mv);
+
+                    if mv.is_none() {
+                        continue;
+                    }
+
+                    self.game.mv(mv.unwrap());
+                    let mv = bot_move(&self.game.board(), self.difficulty as usize, self.side);
+                    if mv.1.is_none() {
+                        continue;
+                    }
+                    self.game.mv(mv.1.unwrap());
+                },
+                "legal_moves" => {
+                    let legal_moves = self.game.legal_moves(self.side);
+                    let legal_moves = legal_moves
+                        .iter()
+                        .map(|mv| mv.into_uci(self.side))
+                        .collect::<Vec<String>>()
+                        .join(",");
+                    let response = Communication {
+                        _type: "legal_moves".to_string(),
+                        data: Some(legal_moves),
+                    };
+                    let response = serde_json::to_string(&response).unwrap();
+                    sender.send(Message::Text(response)).await.unwrap();
+                }
+                _ => continue,
+            }
+
         }
+
     }
 }
 

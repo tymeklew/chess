@@ -1,11 +1,10 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Board, ChatBox } from "../../components";
-import { GiCrossedPistols, GiFlyingFlag, GiChessKing , GiRobotAntennas , GiPerson } from "react-icons/gi";
+import { GiCrossedPistols, GiFlyingFlag, GiChessKing , GiRobotAntennas , GiPerson, GiPlayButton, GiChessQueen } from "react-icons/gi";
 import { fromUCI, Move, Piece, toUCI } from "../shared/interfaces";
 import "./game.css";
 import { Colour, PieceType } from "../shared/enum";
 import DEFAULT_BOARD from "../shared/const";
-import Promotion from "../../components/promotion/promotion";
 
 enum Status {
   Disconnected,
@@ -29,7 +28,7 @@ export default function Game() {
 
   function handleButtonClick() {
     setStatus(Status.Connecting);
-    const socket = new WebSocket("ws://localhost:5173/api/ws/bot");
+    const socket = new WebSocket("ws://localhost:5173/api/ws/play?game=bot?side=white?difficulty=3");
     setWebSock(socket);
     // Connection opened
     socket.onopen = () => {
@@ -103,9 +102,19 @@ export default function Game() {
         <Board board={board} moves={legalMoves} setActiveSquare={setActiveSquare} activeSquare={activeSquare} sendMove={sendMove} setPromotionPiece={setPromotionPiece}/>
         <div className="info-container">
           {getStatus()}
-          <button onClick={handleButtonClick}>
-            {" "}
-            Play <GiChessKing />{" "}
+          <h2> Play real </h2>
+          <button className="play-button"> 
+           <GiChessKing/> Play 
+          </button>
+          <h2>Play bot</h2>
+          <button>
+            <GiRobotAntennas/> Play Easy
+          </button>
+          <button>
+            <GiRobotAntennas/> Play Medium 
+          </button>
+          <button>
+            <GiRobotAntennas/> Play Hard 
           </button>
         </div>
       </div>

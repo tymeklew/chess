@@ -5,11 +5,19 @@ interface Piece {
   type : PieceType,
 }
 
+interface Square {
+  // Horizontal file
+  file : number;
+  // Vertical rank
+  rank : number;
+}
+
 interface Move {
   from : [number , number];
   to : [number , number];
   promotion : PieceType | null;
 }
+
 
 const ALPHABET = "abcdefgh";
 function toUCI(move : Move) {

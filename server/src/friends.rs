@@ -1,8 +1,9 @@
 use crate::{auth::AuthenticatedUser, error::AppError, AppState};
+use anyhow::Result;
 use axum::extract::Query;
 use axum::{extract::State, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
-use sqlx::Row;
+use sqlx::{query_as, Row};
 use sqlx::{error::ErrorKind, query};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -46,7 +47,7 @@ pub async fn search_user(
 }
 
 #[derive(Deserialize)]
-pub struct FriendRequest {
+pub struct NewFriendRequest {
     friend_id: Uuid,
 }
 
@@ -57,11 +58,12 @@ const FRIEND_REQUEST: &str = r#"
 pub async fn friend_request(
     State(state): State<Arc<AppState>>,
     user: AuthenticatedUser,
-    Json(payload): Json<FriendRequest>,
+    Json(payload): Json<NewFriendRequest>,
 ) -> Result<StatusCode, AppError> {
     let request_id = Uuid::new_v4();
 
     let pool = &state.pool;
+    log::info!("{} , {} , {}" , request_id , user.0 , payload.friend_id);
 
     match query(FRIEND_REQUEST)
         .bind(request_id)
@@ -72,10 +74,11 @@ pub async fn friend_request(
     {
         Ok(_) => Ok(StatusCode::CREATED),
         Err(e) => match e.as_database_error() {
-            Some(err) if err.kind() == ErrorKind::UniqueViolation => {
+            Some(err) if err.kind() == ErrorKind::UniqueViolation || err.kind() == ErrorKind::ForeignKeyViolation => {
                 Err(StatusCode::CONFLICT.into())
             }
-            _ => Err(StatusCode::INTERNAL_SERVER_ERROR.into()),
+            _ => {
+                Err(StatusCode::INTERNAL_SERVER_ERROR.into())},
         },
     }
 }
@@ -165,4 +168,68 @@ pub async fn respond_to_friend_request(
     }
 
     Ok(StatusCode::CREATED)
+}
+
+const FRIENDS_QUERY : &str = r#"
+SELECT users.username , users.user_id
+FROM friendships f
+JOIN users ON users.user_id =
+              CASE
+                  WHEN f.user_id = $1 THEN f.friend_id
+                  ELSE f.user_id
+              END
+WHERE $1 IN (f.user_id , f.friend_id)
+"#;
+pub async fn list_friends(State(state) : State<Arc<AppState>> , user : AuthenticatedUser) -> Result<Json<Vec<User>> , AppError> {
+    let res = query(FRIENDS_QUERY)
+        .bind(user.0)
+        .fetch_all(&state.pool)
+        .await?;
+
+    Ok(Json(
+        res.iter()
+            .map(|row| User {
+                user_id: row.get(0),
+                username: row.get(1),
+            })
+            .collect(),
+    ))
+
+}
+
+#[derive(Deserialize , Serialize , sqlx::FromRow , Debug)]
+pub struct FriendRequest {
+    request_id : Uuid,
+    // Username of either the user or the friend
+    username : String,
+    //Who sent the friend request
+    incoming : bool,
+    status : String,
+}
+const FRIEND_REQUESTS_QUERY : &str = r#"
+SELECT users.username, subquery.incoming , subquery.status::text As status , subquery.request_id
+FROM (
+    SELECT req.*,
+           CASE
+               WHEN friend_id = 'f604bc1c-90c7-4361-9ec4-bf591e183744' THEN TRUE
+               ELSE FALSE
+           END AS incoming
+    FROM friend_requests req
+    WHERE req.friend_id = 'f604bc1c-90c7-4361-9ec4-bf591e183744'
+       OR req.user_id = 'f604bc1c-90c7-4361-9ec4-bf591e183744'
+) AS subquery
+JOIN users ON users.user_id =
+    CASE
+        WHEN subquery.incoming = TRUE THEN subquery.user_id
+        ELSE subquery.friend_id
+    END;
+"#; 
+#[axum::debug_handler]
+pub async fn list_friend_requests(State(state) : State<Arc<AppState>> , user : AuthenticatedUser) -> Result<Json<Vec<FriendRequest>> , AppError> {
+    let res : Vec<FriendRequest> = query_as(FRIEND_REQUESTS_QUERY)
+        .bind(user.0)
+        .fetch_all(&state.pool)
+        .await?; 
+
+    Ok(Json(res))
 }

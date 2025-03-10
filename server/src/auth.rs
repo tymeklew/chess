@@ -9,6 +9,7 @@ use bcrypt::{hash, DEFAULT_COST};
 use serde::Deserialize;
 use sqlx::query;
 use sqlx::Row;
+use tracing_subscriber::field::debug;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -124,15 +125,21 @@ pub async fn login(
         .bind(user_id)
         .execute(pool)
         .await?;
+    log::error!("Session id : {}", session_id);
 
-    Ok(jar.add(Cookie::new("session_id", session_id.to_string())))
+    let mut cookie = Cookie::new("session_id" , session_id.to_string());
+    cookie.set_path("/");
+    cookie.http_only();
+    cookie.set_same_site(None);
+
+    Ok(jar.add(cookie))
 }
 
 pub struct AuthenticatedUser(pub Uuid);
 
 const SESSION_QUERY: &str = r#"
     SELECT user_id FROM sessions
-    WHERE session_id = $1 AND created_at > CURRENT_TIMESTAMP - INTERVAL '2 weeks' 
+    WHERE session_id = $1 
 "#;
 #[async_trait]
 impl<S> FromRequestParts<S> for AuthenticatedUser
@@ -155,20 +162,18 @@ where
             .map_err(|err| err.into_response())?;
         let pool = &state.pool;
 
-        log::debug!("Session id : {}", session_id);
         let res = query(SESSION_QUERY)
             .bind(session_id)
             .fetch_optional(pool)
             .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
-        log::debug!("After request");
+            .map_err(|_| StatusCode::IM_A_TEAPOT.into_response())?;
 
         let row = match res {
             Some(row) => row,
             None => return Err(StatusCode::UNAUTHORIZED.into_response()),
         };
+        log::error!("FINAL");
         let user_id: Uuid = row.get(0);
-
         Ok(AuthenticatedUser(user_id))
     }
 }
