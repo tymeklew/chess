@@ -211,12 +211,12 @@ SELECT users.username, subquery.incoming , subquery.status::text As status , sub
 FROM (
     SELECT req.*,
            CASE
-               WHEN friend_id = 'f604bc1c-90c7-4361-9ec4-bf591e183744' THEN TRUE
+               WHEN friend_id = $1 THEN TRUE
                ELSE FALSE
            END AS incoming
     FROM friend_requests req
-    WHERE req.friend_id = 'f604bc1c-90c7-4361-9ec4-bf591e183744'
-       OR req.user_id = 'f604bc1c-90c7-4361-9ec4-bf591e183744'
+    WHERE req.friend_id = $1 
+       OR req.user_id = $1
 ) AS subquery
 JOIN users ON users.user_id =
     CASE
