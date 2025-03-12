@@ -172,7 +172,6 @@ where
             Some(row) => row,
             None => return Err(StatusCode::UNAUTHORIZED.into_response()),
         };
-        log::error!("FINAL");
         let user_id: Uuid = row.get(0);
         Ok(AuthenticatedUser(user_id))
     }

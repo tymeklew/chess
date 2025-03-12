@@ -35,6 +35,7 @@ impl<T> Lobby<T> {
         let element = self.data[self.front].take();
         self.data[self.front] = None;
         self.front = (self.front + 1) % MAX_PLAYERS;
+        self.size -= 1;
         element
     }
 

@@ -13,6 +13,7 @@ use axum::extract::{ConnectInfo, Query, State, WebSocketUpgrade};
 use axum::response::IntoResponse;
 use axum::routing::{any, get, post};
 use axum::{Extension, Router};
+use game::PlayerGame;
 use log::info;
 use player::Player;
 use serde::Deserialize;
@@ -40,14 +41,34 @@ impl AppState {
 
     pub async fn bot_game(&self, player: Player , difficulty : Option<String> , side : Option<String>) {
         if difficulty.is_none() || side.is_none() {
+            info!("Insufficient data for bot game");
             return;
         }
+        info!("Continue");
         let game = BotGame::new(player , self.pool.clone() , difficulty.unwrap() , side.unwrap());
+        info!("Continue after");
         tokio::spawn(async move {
             game.start().await;
         });
     }
-    pub async fn player_game(&self , player : Player) {}
+    pub async fn player_game(&self , player : Player) {
+        let mut lobby = self.lobby.lock().unwrap();
+        lobby.enqueue(player);
+        info!("Enque : {}", lobby.size());
+
+        if lobby.size() == 2 {
+            info!("match found");
+            let white = lobby.dequeue().unwrap();
+            let black = lobby.dequeue().unwrap();
+
+            let game = PlayerGame::new(white, black, self.pool.clone());
+            tokio::spawn(
+                async  move {
+                    game.start().await;
+                }
+            );
+        }
+    }
 }
 
 #[tokio::main]
@@ -127,23 +148,18 @@ async fn ws_handler(
 }
 
 async fn handle_socket(
-    mut sock: WebSocket,
+    sock: WebSocket,
     addr: SocketAddr,
     state: Arc<AppState>,
     user: AuthenticatedUser,
     payload: GameQuery,
 ) {
-    if sock.send(Message::Ping(vec![1, 2, 3])).await.is_ok() {
-    } else {
-        println!("Could not send ping {addr}!");
-        return;
-    }
-
     let player = Player::new(user.0 , sock);
 
+    log::info!("Started : {}" , player.id);
     match payload.game.as_str() {
         "bot" => state.bot_game(player , payload.difficulty , payload.side).await,
-        "player" => state.player_game(player).await,
-        _ => {}
+        "competitive" => state.player_game(player).await,
+        s => info!("Unknown game type : {}", s),
     };
 }
