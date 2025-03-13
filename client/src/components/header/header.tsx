@@ -25,6 +25,11 @@ export default function Header() {
               Friends
             </Link>
           </li>
+          <li>
+            <Link to="/me" className="nav-link">
+              Me
+              </Link>
+          </li>
           <li onClick={auth?.logOut}>
             Log Out
           </li>

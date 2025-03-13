@@ -22,6 +22,7 @@ export default function Game() {
   const [legalMoves , setLegalMoves] = useState<Move[]>([]);
   const [side , setSide] = useState<Colour>(Colour.White);
   const [promotionPiece , setPromotionPiece] = useState<PieceType | null>(null);
+  const [myTurn , setMyTurn] = useState<boolean>(false);
 
   useEffect(() => {
     console.log("Setting board");
@@ -73,6 +74,7 @@ export default function Game() {
     webSock?.send(JSON.stringify({type: "move", data: toUCI(mv)}));
     webSock?.send(JSON.stringify({type: "legal_moves"}));
     setBoard(temp);
+    setMyTurn(false);
   }
 
   function handleMessage(evt : any) { 
@@ -97,6 +99,7 @@ export default function Game() {
               type: move.promotion
             };
           }
+          setMyTurn(true);
           return temp;
         });
         break;
@@ -113,9 +116,11 @@ export default function Game() {
         switch (msg.data) {
           case "white":
             setSide(Colour.White);
+            setMyTurn(true);
             break;
           case "black":
             setSide(Colour.Black);
+            setMyTurn(false);
             break;
         }
         alert("Game started playing as " + msg.data);
@@ -138,7 +143,7 @@ export default function Game() {
   return (
     <div className="game-container">
       <div className="board-container">
-        <Board board={board} moves={legalMoves} setActiveSquare={setActiveSquare} activeSquare={activeSquare} sendMove={sendMove} setPromotionPiece={setPromotionPiece} side={side}/>
+        <Board board={board} moves={legalMoves} setActiveSquare={setActiveSquare} activeSquare={activeSquare} sendMove={sendMove} setPromotionPiece={setPromotionPiece} side={side} myTurn={myTurn}/>
         <div className="info-container">
           {getStatus()}
           <h2> Play real </h2>

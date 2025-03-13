@@ -5,6 +5,8 @@ use futures::StreamExt;
 use log::info;
 use serde::de::value::StringDeserializer;
 use serde::{Deserialize, Serialize};
+use sqlx::query;
+use uuid::Uuid;
 
 use crate::player::Player;
 use crate::AppState;
@@ -14,7 +16,7 @@ pub trait Game {
 }
 
 #[derive(Clone , Copy)]
-enum BotDifficulty {
+pub enum BotDifficulty {
     Easy = 1,
     Medium = 2,
     Hard = 3,
@@ -110,6 +112,13 @@ impl Game for BotGame {
                     }
 
                     self.game.mv(mv.unwrap());
+
+                    if let GameStatus::Checkmate(_) = self.game.status() {
+                        sender.send(Message::Text(serde_json::to_string(&Communication::new("game_over".to_string() , Some("checkmate,white".to_string()))).unwrap())).await.unwrap();
+                        save_bot_game(&self.pool , &self.game , self.player.id , self.difficulty).await;
+                        break;
+                    }
+
                     info!("Calculating at difficulty {}" , self.difficulty as usize);
                     let mv = bot_move(&self.game.board(), self.difficulty as usize, self.side.other());
                     if mv.1.is_none() {
@@ -125,6 +134,12 @@ impl Game for BotGame {
                     };
                     let response = serde_json::to_string(&response).unwrap();
                     sender.send(Message::Text(response)).await.unwrap();
+
+                    if let GameStatus::Checkmate(_) = self.game.status() {
+                        sender.send(Message::Text(serde_json::to_string(&Communication::new("game_over".to_string() , Some("checkmate,black".to_string()))).unwrap())).await.unwrap();
+                        save_bot_game(&self.pool , &self.game , self.player.id , self.difficulty).await;
+                        break;
+                    }
                 },
                 "legal_moves" => {
                     let legal_moves = self.game.legal_moves(self.side);
@@ -188,6 +203,8 @@ lazy_static::lazy_static! {
 
 impl Game for PlayerGame {
      async fn start(mut self) {
+        // Start time chrono
+        let start = chrono::Utc::now();
         let (mut white_sender, mut white_receiver) = self.white.sock.split();
         let (mut black_sender, mut black_receiver) = self.black.sock.split();
         info!("Started for real");
@@ -230,6 +247,7 @@ impl Game for PlayerGame {
                             if let GameStatus::Checkmate(_) = self.game.status() {
                                 black_sender.send(Message::Text(serde_json::to_string(&Communication::new("game_over".to_string() , Some("checkmate,white".to_string()))).unwrap())).await.unwrap();
                                 white_sender.send(Message::Text(serde_json::to_string(&Communication::new("game_over".to_string() , Some("checkmate,white".to_string()))).unwrap())).await.unwrap();
+                                save_player_game(&self.pool , &self.game , self.white.id , self.black.id , start).await; 
                                 break;
                             }
                         },
@@ -266,6 +284,7 @@ impl Game for PlayerGame {
                             if let GameStatus::Checkmate(_) = self.game.status() {
                                 black_sender.send(Message::Text(serde_json::to_string(&Communication::new("game_over".to_string() , Some("checkmate,black".to_string()))).unwrap())).await.unwrap();
                                 white_sender.send(Message::Text(serde_json::to_string(&Communication::new("game_over".to_string() , Some("checkmate,black".to_string()))).unwrap())).await.unwrap();
+                                save_player_game(&self.pool , &self.game , self.white.id , self.black.id , start).await; 
                                 break;
                             }
                         }
@@ -287,4 +306,63 @@ fn legal_moves(game : &ChessGame , side : Sides) -> String {
     };
 
     serde_json::to_string(&comm).unwrap()
+}
+
+const INSERT_PLAYER_GAME : &str = r#"
+INSERT INTO player_games (game_id , white_id , black_id , started , finished , pgn , winner)
+VALUES ($1 , $2 , $3 , $4 , $5 , $6 , $7)
+"#;
+pub async fn save_player_game(pool : &sqlx::PgPool , game : &ChessGame , white : Uuid , black : Uuid , started : chrono::DateTime<chrono::Utc>) {
+    let game_id = Uuid::new_v4();
+    let moves = game.all_moves();
+    let winner_id = match game.status() {
+        GameStatus::Checkmate(side) => {
+            if side == Sides::White {
+                white
+            } else {
+                black
+            }
+        },
+        _ => return,
+    };
+
+    query(INSERT_PLAYER_GAME)
+        .bind(game_id)
+        .bind(white)
+        .bind(black)
+        .bind(started)
+        .bind(chrono::Utc::now())
+        .bind(moves)
+        .bind(winner_id)
+        .execute(pool)
+        .await.unwrap();
+}
+
+const INSERT_BOT_GAME : &str = r#"
+INSERT INTO bot_games (id , player_id , white , difficulty , png ,won)
+VALUES ($1 , $2 , TRUE , $3 , $4 , $5)
+"#;
+pub async fn save_bot_game(pool : &sqlx::PgPool , game : &ChessGame , white : Uuid , difficulty : BotDifficulty) {
+    let game_id = Uuid::new_v4();
+    let moves = game.all_moves();
+    let won = match game.status() {
+        GameStatus::Checkmate(side) => {
+            if side == Sides::Black {
+                true
+            } else {
+                false
+            }
+        },
+        _ => return,
+    };
+
+
+    query(INSERT_BOT_GAME)
+        .bind(game_id)
+        .bind(white)
+        .bind(difficulty as i32)
+        .bind(moves)
+        .bind(won)
+        .execute(pool)
+        .await.unwrap();
 }

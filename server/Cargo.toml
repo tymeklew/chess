@@ -17,9 +17,10 @@ futures = "0.3.31"
 uuid = { version = "1.11.0", features = ["v4" , "serde"] }
 serde = {version = "1.0.216" , features = ["derive"]}
 serde_json = "1.0.133"
-sqlx = {version = "0.8.3" , features = ["uuid" , "postgres" , "runtime-tokio"]}
+sqlx = {version = "0.8.3" , features = ["uuid" , "postgres" , "runtime-tokio" , "time" , "chrono"]}
 anyhow = "1.0.95"
 bcrypt = "0.17.0"
 thiserror = "2.0.11"
 regex = "1.11.1"
 lazy_static = "1.5.0"
+chrono = {version = "0.4.40" , features = ["serde"]}

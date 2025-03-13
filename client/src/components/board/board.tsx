@@ -13,12 +13,17 @@ interface BoardProps {
   sendMove : (move : Move) => void;
   setPromotionPiece : React.Dispatch<React.SetStateAction<PieceType | null>>;
   side : Colour;
+  myTurn : boolean;
 }
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 export default function Board(props : BoardProps) {
   function handleTileClick( i : number , j : number , piece : Piece | null) {
-    console.log("SIDE : " + props.side);
+    if (!props.myTurn) {
+      console.log(props.myTurn);
+      alert("Not your turn");
+      return;
+    }
     if (piece && piece?.colour == props.side) {
       props.setActiveSquare([i , j]);
     } else {

@@ -30,6 +30,18 @@ impl ChessGame {
         self.status
     }
 
+    // Funcion to retun all the moves played in UCI seperated by comma
+    pub fn all_moves(&self) -> String {
+        let mut moves = String::new();
+
+        for mv in self.history.iter() {
+            moves.push_str(&mv.into_uci(Sides::White));
+            moves.push(',');
+        }
+
+        moves
+    }
+
     pub fn mv(&mut self, m: Move) {
         if self.status != GameStatus::InProgress {
             return;

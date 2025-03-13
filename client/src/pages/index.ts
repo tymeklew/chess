@@ -3,5 +3,6 @@ import Game from "./game/game";
 import Login from "./login/login";
 import Signup from "./signup/signup";
 import Friends from "./friends/friends";
+import Me from "./me/me";
 
-export { Home, Game, Login , Signup , Friends };
+export { Home, Game, Login , Signup , Friends , Me};

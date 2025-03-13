@@ -237,7 +237,7 @@ impl Board {
             .filter(|f| {
                 let mut new = self.clone();
                 f.apply(&mut new);
-                !new.is_check(side_to_move)
+                !new.is_check(side_to_move) && f.capture() != Some(Pieces::King)
             })
             .collect()
     }

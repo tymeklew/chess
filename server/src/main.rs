@@ -4,11 +4,12 @@ mod friends;
 mod game;
 mod lobby;
 mod player;
+mod me;
 
 use crate::game::{BotGame, Game};
 use crate::lobby::Lobby;
 use auth::AuthenticatedUser;
-use axum::extract::ws::{Message, WebSocket};
+use axum::extract::ws::{WebSocket};
 use axum::extract::{ConnectInfo, Query, State, WebSocketUpgrade};
 use axum::response::IntoResponse;
 use axum::routing::{any, get, post};
@@ -17,7 +18,6 @@ use game::PlayerGame;
 use log::info;
 use player::Player;
 use serde::Deserialize;
-use serde_json::map::OccupiedEntry;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 use std::net::SocketAddr;
@@ -99,6 +99,9 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/api/ws/play", any(ws_handler))
+        .route("/api/me", get(me::me))
+        .route("/api/games/bot" , get(me::bot_games))
+        .route("/api/games/competitive" , get(me::player_games))
         .route("/api/friends/list", get(friends::list_friends))
         .route("/api/friends/request", post(friends::friend_request))
         .route("/api/friends/requests/list" , get(friends::list_friend_requests))
