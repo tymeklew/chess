@@ -110,7 +110,7 @@ impl Game for BotGame {
 
                     let response = Communication {
                         _type: "move".to_string(),
-                        data: Some(temp.into_uci(self.side)),
+                        data: Some(temp.into_uci(Sides::Black)),
                     };
                     let response = serde_json::to_string(&response).unwrap();
                     sender.send(Message::Text(response)).await.unwrap();
@@ -119,7 +119,7 @@ impl Game for BotGame {
                     let legal_moves = self.game.legal_moves(self.side);
                     let legal_moves = legal_moves
                         .iter()
-                        .map(|mv| mv.into_uci(self.side))
+                        .map(|mv| mv.into_uci(Sides::White))
                         .collect::<Vec<String>>()
                         .join(",");
                     let response = Communication {
@@ -127,13 +127,12 @@ impl Game for BotGame {
                         data: Some(legal_moves),
                     };
                     let response = serde_json::to_string(&response).unwrap();
+                    info!("Responding with legal moves");
                     sender.send(Message::Text(response)).await.unwrap();
                 }
                 _ => continue,
             }
-
         }
-
     }
 }
 
