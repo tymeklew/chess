@@ -68,11 +68,22 @@ struct Communication {
     _type: String,
     data: Option<String>,
 }
+
+impl Communication{
+    pub fn new(_type : String , data : Option<String>) -> Self {
+        Self {
+            _type,
+            data,
+        }
+    }
+}
 //TODO
 impl Game for BotGame {
     async fn start(mut self) {
         let (mut sender, mut receiver) = self.player.sock.split();
         info!("Hello");
+
+        sender.send(Message::Text(WHITE_STARTED.clone())).await.unwrap();
 
         while let Some(Ok(msg)) = receiver.next().await {
             if self.game.status() != GameStatus::InProgress {
@@ -170,19 +181,19 @@ impl PlayerGame {
     }
 }
 
+lazy_static::lazy_static! {
+    static ref WHITE_STARTED : String = serde_json::to_string(&Communication::new("game_started".to_string() , Some("white".to_string()))).unwrap();
+    static ref BLACK_STARTED : String = serde_json::to_string(&Communication::new("game_started".to_string() , Some("black".to_string()))).unwrap();
+}
+
 impl Game for PlayerGame {
      async fn start(mut self) {
         let (mut white_sender, mut white_receiver) = self.white.sock.split();
         let (mut black_sender, mut black_receiver) = self.black.sock.split();
         info!("Started for real");
 
-        let started = Communication {
-            _type : "game_started".to_string(),
-            data : None,
-        };
-        let started = serde_json::to_string(&started).unwrap();
-        white_sender.send(Message::Text(started.clone())).await.unwrap();
-        black_sender.send(Message::Text(started)).await.unwrap();
+        white_sender.send(Message::Text(WHITE_STARTED.clone())).await.unwrap();
+        black_sender.send(Message::Text(BLACK_STARTED.clone())).await.unwrap();
 
         loop {
         tokio::select! {
@@ -214,8 +225,13 @@ impl Game for PlayerGame {
                                 data : Some(mv.into_uci(Sides::White)),
                             };
                             let response = serde_json::to_string(&response).unwrap();
-                            info!("Sent to black");
                             black_sender.send(Message::Text(response)).await.unwrap();
+
+                            if let GameStatus::Checkmate(_) = self.game.status() {
+                                black_sender.send(Message::Text(serde_json::to_string(&Communication::new("game_over".to_string() , Some("checkmate,white".to_string()))).unwrap())).await.unwrap();
+                                white_sender.send(Message::Text(serde_json::to_string(&Communication::new("game_over".to_string() , Some("checkmate,white".to_string()))).unwrap())).await.unwrap();
+                                break;
+                            }
                         },
                         _ => {},
                     }
@@ -231,6 +247,28 @@ impl Game for PlayerGame {
                             let mvs = legal_moves(&self.game , Sides::Black);
                             black_sender.send(Message::Text(mvs)).await.unwrap();
                         },
+                        "move" => {
+                            let mv = comm.data.unwrap();
+                            let mv = self.game.move_from_uci(&mv);
+
+                            if mv.is_none() {
+                                continue;
+                            }
+                            let mv = mv.unwrap();
+
+                            self.game.mv(mv.clone());
+                            let response = Communication {
+                                _type : "move".to_string(),
+                                data : Some(mv.into_uci(Sides::Black)),
+                            };
+                            let response = serde_json::to_string(&response).unwrap();
+                            white_sender.send(Message::Text(response)).await.unwrap();
+                            if let GameStatus::Checkmate(_) = self.game.status() {
+                                black_sender.send(Message::Text(serde_json::to_string(&Communication::new("game_over".to_string() , Some("checkmate,black".to_string()))).unwrap())).await.unwrap();
+                                white_sender.send(Message::Text(serde_json::to_string(&Communication::new("game_over".to_string() , Some("checkmate,black".to_string()))).unwrap())).await.unwrap();
+                                break;
+                            }
+                        }
                         _ => {},
                     }
                 }

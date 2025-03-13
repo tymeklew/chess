@@ -20,6 +20,7 @@ export default function Game() {
   const [board , setBoard] = useState<(Piece | null)[][]>([]);
   const [activeSquare , setActiveSquare] = useState<[number , number] | null>(null);
   const [legalMoves , setLegalMoves] = useState<Move[]>([]);
+  const [side , setSide] = useState<Colour>(Colour.White);
   const [promotionPiece , setPromotionPiece] = useState<PieceType | null>(null);
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export default function Game() {
     if (difficulty) {
       url = `ws://localhost:5173/api/ws/play?game=bot&side=white&difficulty=${difficulty}`
     } else {
-      url = "ws://localhost:5173/api/ws/play?game=real?side=white"
+      url = "ws://localhost:5173/api/ws/play?game=competitive"
     }
     const socket = new WebSocket(url);
     setWebSock(socket);
@@ -107,6 +108,18 @@ export default function Game() {
       case "game_over":
         alert("Game Over : " + msg.data);
         break;
+      case "game_started":
+        console.log("Game started : " + msg.data)
+        switch (msg.data) {
+          case "white":
+            setSide(Colour.White);
+            break;
+          case "black":
+            setSide(Colour.Black);
+            break;
+        }
+        alert("Game started playing as " + msg.data);
+        break;
     }
   }
 
@@ -125,7 +138,7 @@ export default function Game() {
   return (
     <div className="game-container">
       <div className="board-container">
-        <Board board={board} moves={legalMoves} setActiveSquare={setActiveSquare} activeSquare={activeSquare} sendMove={sendMove} setPromotionPiece={setPromotionPiece}/>
+        <Board board={board} moves={legalMoves} setActiveSquare={setActiveSquare} activeSquare={activeSquare} sendMove={sendMove} setPromotionPiece={setPromotionPiece} side={side}/>
         <div className="info-container">
           {getStatus()}
           <h2> Play real </h2>

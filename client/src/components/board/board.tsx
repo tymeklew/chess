@@ -12,20 +12,19 @@ interface BoardProps {
   activeSquare : [number , number] | null;
   sendMove : (move : Move) => void;
   setPromotionPiece : React.Dispatch<React.SetStateAction<PieceType | null>>;
+  side : Colour;
 }
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 export default function Board(props : BoardProps) {
-  const dialog = React.useRef<HTMLDialogElement>(null);
-  //t Make text numbering and lettering inverted
-  useEffect(() => {
-  } , [props.activeSquare]);
-
   function handleTileClick( i : number , j : number , piece : Piece | null) {
-    if (piece && piece.colour == "white") {
+    console.log("SIDE : " + props.side);
+    if (piece && piece?.colour == props.side) {
       props.setActiveSquare([i , j]);
     } else {
+      console.log("EVER REACH ");
       if (props.activeSquare) {
+        console.log(props.moves);
         let move = props.moves.find(move => move.from[0] == props.activeSquare?.[1] && move.from[1] == props.activeSquare?.[0] && move.to[0] == j && move.to[1] == i);
         if (move) {
           props.setActiveSquare(null);
@@ -40,7 +39,7 @@ export default function Board(props : BoardProps) {
       {props.board.map((row, i) => {
         return row.map((piece, j) => {
           let isActiveSquare = i == props.activeSquare?.[0] && j == props.activeSquare?.[1];
-          return <div key={`${i}-${j}`} className={`tile tile-${(i + j) % 2 == 0 ? 'dark' : 'light'} ${isActiveSquare ? 'active' : ''} `} onClick={() => handleTileClick(i , j , piece)}>
+          return <div key={`${i}-${j}`} className={`tile tile-${(i + j) % 2 == 0 ? 'dark' : 'light'} ${isActiveSquare ? 'active' : ''}`} onClick={() => handleTileClick(i , j , piece)}>
             {j == 0 ? <p className="upper-number numbering">{ 8 - i}</p> : ""}
             {i == 7 ? <p className="lower-letter numbering">{ALPHABET[j]}</p> : ""}
             {piece == null ? "" : <img className="piece" src={`/assets/${piece.colour}_${piece.type}.png`} alt="Piece" />}
