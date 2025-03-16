@@ -109,7 +109,7 @@ pub async fn login(
         .fetch_optional(pool)
         .await?;
     if user.is_none() {
-        return Err(StatusCode::UNAUTHORIZED.into());
+        return Err(StatusCode::NOT_FOUND.into());
     }
     let row = user.unwrap();
     let user_id: Uuid = row.get(0);

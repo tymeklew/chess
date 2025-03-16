@@ -1,7 +1,19 @@
 use crate::board::{Bitboard, Board};
+use crate::game::{BLACK_KING, BLACK_KING_SIDE_ROOK, BLACK_QUEEN_SIDE_ROOK, WHITE_KING, WHITE_KING_SIDE_ROOK, WHITE_QUEEN_SIDE_ROOK};
 use crate::pieces::Pieces;
 use crate::{Sides, Square};
 use std::fmt::{Debug, Display};
+
+pub const WHITE_QUEEN_CASTLING_UCI: &str = "e1c1";
+pub const WHITE_KING_CASTLING_UCI: &str = "e1g1";
+pub const BLACK_QUEEN_CASTLING_UCI: &str = "e8c8";
+pub const BLACK_KING_CASTLING_UCI: &str = "e8g8";
+
+#[derive(Clone, Debug)]
+pub enum CastlingSide {
+    KingSide,
+    QueenSide,
+}
 
 #[derive(Debug, Clone)]
 pub enum Move {
@@ -16,7 +28,7 @@ pub enum Move {
     },
     Castling {
         side: Sides,
-        king_side: bool,
+        castling_side: CastlingSide,
     },
     Promotion {
         source: Square,
@@ -49,6 +61,21 @@ impl Display for Move {
                 "{} -> {} promoting to {}",
                 source, destination, promotion_piece
             ),
+            Move::Castling {
+                side,
+                castling_side,
+            } => write!(
+                f,
+                "{} castling {}",
+                match side {
+                    Sides::White => "white",
+                    Sides::Black => "black",
+                },
+                match castling_side {
+                    CastlingSide::KingSide => "king side",
+                    CastlingSide::QueenSide => "queen side",
+                }
+            ),
             _ => todo!(),
         }
     }
@@ -72,6 +99,24 @@ impl Move {
                 capture,
                 promotion_piece,
             } => apply_promotion(board, source, destination, capture, promotion_piece),
+            Move::Castling { side, castling_side } => match (side ,  castling_side) {
+                (Sides::White , CastlingSide::QueenSide) => {
+                    move_piece(&WHITE_KING , &Square::new(2 , 0) , board) && 
+                    move_piece(&WHITE_QUEEN_SIDE_ROOK , &Square::new(3 , 0) , board)
+                },
+                (Sides::White , CastlingSide::KingSide) => {
+                    move_piece(&WHITE_KING , &Square::new(6 , 0) , board) && 
+                    move_piece(&WHITE_KING_SIDE_ROOK , &Square::new(5 , 0) , board)
+                },
+                (Sides::Black , CastlingSide::QueenSide) => {
+                    move_piece(&BLACK_KING, &Square::new(2 , 7) , board) && 
+                    move_piece(&BLACK_QUEEN_SIDE_ROOK , &Square::new(3 , 7) , board)
+                },
+                (Sides::Black , CastlingSide::KingSide) => {
+                    move_piece(&BLACK_KING , &Square::new(6 , 7) , board) && 
+                    move_piece(&BLACK_KING_SIDE_ROOK , &Square::new(5 , 7) , board)
+                },
+            }
             _ => todo!(),
         }
     }
@@ -92,6 +137,25 @@ impl Move {
                 capture,
                 promotion_piece,
             } => undo_promotion(board, source, destination, capture, promotion_piece),
+            Move::Castling { side, castling_side } => match (side , castling_side) {
+                (Sides::White , CastlingSide::QueenSide) => {
+                    move_piece(&Square::new(2 , 0) , &WHITE_KING , board) && 
+                    move_piece(&Square::new(3 , 0) , &WHITE_QUEEN_SIDE_ROOK , board)
+                },
+                (Sides::White , CastlingSide::KingSide) => {
+                    move_piece(&Square::new(6 , 0) , &WHITE_KING , board) && 
+                    move_piece(&Square::new(5 , 0) , &WHITE_KING_SIDE_ROOK , board)
+                },
+                (Sides::Black , CastlingSide::QueenSide) => {
+                    move_piece(&Square::new(2 , 7) , &BLACK_KING , board) && 
+                    move_piece(&Square::new(3 , 7) , &BLACK_QUEEN_SIDE_ROOK , board)
+                },
+                (Sides::Black , CastlingSide::KingSide) => {
+                    move_piece(&Square::new(6 , 7) , &BLACK_KING , board) && 
+                    move_piece(&Square::new(5 , 7) , &BLACK_KING_SIDE_ROOK , board)
+                },
+                _ => todo!(),
+            }
             _ => todo!(),
         }
     }
@@ -122,11 +186,28 @@ impl Move {
                 "{}{}{}",
                 source,
                 destination,
-                match side {
-                    Sides::White => promotion_piece.to_uci().to_ascii_uppercase(),
-                    Sides::Black => promotion_piece.to_uci().to_ascii_lowercase(),
-                }
+                promotion_piece.to_uci().to_ascii_uppercase(),
             ),
+            Move::Castling { side, castling_side } => match (side , castling_side) {
+                (Sides::White , CastlingSide::KingSide) => WHITE_KING_CASTLING_UCI.to_string(),
+                (Sides::White , CastlingSide::QueenSide) => WHITE_QUEEN_CASTLING_UCI.to_string(),
+                (Sides::Black , CastlingSide::KingSide) => BLACK_KING_CASTLING_UCI.to_string(),
+                (Sides::Black , CastlingSide::QueenSide) => BLACK_QUEEN_CASTLING_UCI.to_string(),
+            }
+            _ => todo!(),
+        }
+    }
+    pub fn source(&self) -> Square {
+        match self {
+            Move::Basic { source, .. } => *source,
+            Move::Capture { source, .. } => *source,
+            Move::Promotion { source, .. } => *source,
+            Move::Castling { side, castling_side } => match (side , castling_side) {
+                (Sides::White , CastlingSide::KingSide) => *WHITE_KING,
+                (Sides::White , CastlingSide::QueenSide) => *WHITE_QUEEN_SIDE_ROOK,
+                (Sides::Black , CastlingSide::KingSide) => *BLACK_KING,
+                (Sides::Black , CastlingSide::QueenSide) => *BLACK_QUEEN_SIDE_ROOK,
+            }
             _ => todo!(),
         }
     }

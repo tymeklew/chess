@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::Index};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Square {
     // Horizontal
     pub file: usize,

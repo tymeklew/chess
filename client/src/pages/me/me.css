@@ -1,0 +1,30 @@
+.games {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+}
+.game {
+    height : 100%;
+    width : 100%;
+    padding: 0.3rem;
+    border-radius: 0.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    gap : 1rem;
+}
+.game-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.competitive-game {
+    background-color: #3b414f;
+}
+
+.bot-game {
+    background-color: #3b414f;
+
+}

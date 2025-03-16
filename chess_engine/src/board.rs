@@ -1,19 +1,12 @@
 use crate::attacks::{pawn_moves, sliding_attacks, step_attacks};
-use crate::moves::Move;
+use crate::moves::{CastlingSide, Move, BLACK_KING_CASTLING_UCI, BLACK_QUEEN_CASTLING_UCI, WHITE_KING_CASTLING_UCI, WHITE_QUEEN_CASTLING_UCI};
 use crate::pieces::{Pieces, Sides, ALL_PIECES, ALL_SIDES, PIECES_COUNT, SIDES_COUNT};
 use crate::square::Square;
 use core::panic;
-use std::borrow::BorrowMut;
 use std::fmt::Display;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
-#[derive(Clone)]
-pub enum CastlingSide {
-    KingSide,
-    QueenSide,
-}
-
-#[derive(Clone)]
+#[derive(Clone , Debug)]
 pub struct MoveRights {
     pub white_king_side: bool,
     pub white_queen_side: bool,
@@ -155,47 +148,91 @@ impl Board {
     // Universal chess interface
     // Example: e2e4
     pub fn move_from_uci(&self, input: &str) -> Option<Move> {
-        match input.len() {
-            4 => {
-                let chunks: Vec<String> = input
-                    .chars()
-                    .collect::<Vec<char>>()
-                    .chunks(2)
-                    .map(|c| c.iter().collect::<String>())
-                    .collect();
+        if input == WHITE_KING_CASTLING_UCI  && self.move_rights.white_king_side {
+            return Some(Move::Castling {
+                side: Sides::White,
+                castling_side: CastlingSide::KingSide,
+            });
+        }else if input == WHITE_QUEEN_CASTLING_UCI && self.move_rights.white_queen_side {
+            return Some(Move::Castling {
+                side: Sides::White,
+                castling_side: CastlingSide::QueenSide,
+            });
+        }else if input == BLACK_KING_CASTLING_UCI && self.move_rights.black_king_side {
+            return Some(Move::Castling {
+                side: Sides::Black,
+                castling_side: CastlingSide::KingSide,
+            });
+        }else if input == BLACK_QUEEN_CASTLING_UCI && self.move_rights.black_queen_side {
+            return Some(Move::Castling {
+                side: Sides::Black,
+                castling_side: CastlingSide::QueenSide,
+            });
+        }
 
-                let source = Square::from_algebraic(chunks[0].clone())?;
-                let destination = Square::from_algebraic(chunks[1].clone())?;
+        let chunks: Vec<String> = input
+            .chars()
+            .collect::<Vec<char>>()
+            .chunks(2)
+            .map(|c| c.iter().collect::<String>())
+            .collect();
 
-                let source_side = self.get_side(source)?;
+        let source = Square::from_algebraic(chunks[0].clone())?;
+        let destination = Square::from_algebraic(chunks[1].clone())?;
 
-                let capture = match self.get_side(destination) {
-                    Some(side) if side == source_side.other() => true,
-                    Some(_) => return None,
-                    _ => false,
-                };
+        let source_side = self.get_side(source)?;
 
-                if capture {
-                    match self.get_piece(destination) {
-                        Some(piece) => Some(Move::Capture {
-                            source,
-                            destination,
-                            capture: piece,
-                        }),
-                        None => None,
-                    }
-                } else {
-                    Some(Move::Basic {
+        let capture = match self.get_side(destination) {
+            Some(side) if side == source_side.other() => true,
+            Some(_) => return None,
+            _ => false,
+        };
+
+        if capture {
+            match self.get_piece(destination) {
+                Some(piece) if input.len() == 5 => {
+                    let promotion_piece = match input.chars().nth(4)? {
+                        'Q' => Pieces::Queen,
+                        'R' => Pieces::Rook,
+                        'B' => Pieces::Bishop,
+                        'N' => Pieces::Knight,
+                        _ => return None,
+                    };
+
+                    return Some(Move::Promotion {
                         source,
                         destination,
-                    })
+                        capture: Some(piece),
+                        promotion_piece,
+                    });
                 }
+                Some(piece) => Some(Move::Capture {
+                    source,
+                    destination,
+                    capture: piece,
+                }),
+                None => None,
             }
-            //TODO
-            5 => {
-                todo!()
-            }
-            _ => None,
+        } else if input.len() == 5 {
+            let promotion_piece = match input.chars().nth(4)? {
+                'Q' => Pieces::Queen,
+                'R' => Pieces::Rook,
+                'B' => Pieces::Bishop,
+                'N' => Pieces::Knight,
+                _ => return None,
+            };
+
+            Some(Move::Promotion {
+                source,
+                destination,
+                capture: None,
+                promotion_piece,
+            })
+        } else {
+            Some(Move::Basic {
+                source,
+                destination,
+            })
         }
     }
 
@@ -232,6 +269,7 @@ impl Board {
     }
 
     pub fn legal_moves(&self, side_to_move: Sides) -> Vec<Move> {
+        println!("Rights : {:?}" , self.move_rights);
         self.pseudo_legal_moves(side_to_move)
             .into_iter()
             .filter(|f| {
@@ -243,7 +281,7 @@ impl Board {
     }
 
     // Generates moves including pawn moves
-    fn pseudo_legal_moves(&self, side_to_move: Sides) -> Vec<Move> {
+    pub fn pseudo_legal_moves(&self, side_to_move: Sides) -> Vec<Move> {
         const ROOK_RAY_INDEX: [usize; 4] = [0, 1, 4, 5];
         const BISHOP_RAY_INDEX: [usize; 4] = [2, 3, 6, 7];
         const KNIGHT_DELTAS: [i8; 8] = [15, 17, 10, 6, -15, -17, -10, -6];
@@ -344,7 +382,46 @@ impl Board {
                     }
                 }
             }
+            if piece == Pieces::King {
+                if side_to_move == Sides::White {
+                    if self.occupied() & QUEEN_SIDE_CASTLE == Bitboard(0)
+                        && self.move_rights.white_queen_side
+                    {
+                        moves.push(Move::Castling {
+                            side: side_to_move,
+                            castling_side: CastlingSide::QueenSide,
+                        });
+                    }
+                    if self.occupied() & KING_SIDE_CASTLE == Bitboard(0)
+                        && self.move_rights.white_king_side
+                    {
+                        moves.push(Move::Castling {
+                            side: side_to_move,
+                            castling_side: CastlingSide::KingSide,
+                        });
+                    }
+                } else {
+                    if self.occupied() & Bitboard(QUEEN_SIDE_CASTLE.0 << (7 * 8)) == Bitboard(0)
+                        && self.move_rights.black_queen_side
+                    {
+                        moves.push(Move::Castling {
+                            side: side_to_move,
+                            castling_side: CastlingSide::QueenSide,
+                        });
+                    }
+                    if self.occupied() & Bitboard(KING_SIDE_CASTLE.0 << (7 * 8)) == Bitboard(0)
+                        && self.move_rights.black_king_side
+                    {
+                        moves.push(Move::Castling {
+                            side: side_to_move,
+                            castling_side: CastlingSide::KingSide,
+                        });
+                    }
+                }
+            }
         }
+
+        // Sort moves by score (highest to lowest)
         moves
     }
 
@@ -422,7 +499,7 @@ impl Default for Board {
         Self {
             pieces: [[Bitboard(0); PIECES_COUNT]; SIDES_COUNT],
             sides: [Bitboard(0); SIDES_COUNT],
-            move_rights: MoveRights::default(),
+            move_rights: MoveRights::new(),
         }
     }
 }

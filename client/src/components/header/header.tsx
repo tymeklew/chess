@@ -21,11 +21,6 @@ export default function Header() {
             </Link>
           </li>
           <li>
-            <Link to="/friends" className="nav-link">
-              Friends
-            </Link>
-          </li>
-          <li>
             <Link to="/me" className="nav-link">
               Me
               </Link>

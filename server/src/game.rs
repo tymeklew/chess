@@ -1,15 +1,13 @@
-use axum::extract::ws::{Message, WebSocket};
+use axum::extract::ws::Message;
 use chess_engine::{bot_move, ChessGame, GameStatus, Sides};
 use futures::SinkExt;
 use futures::StreamExt;
 use log::info;
-use serde::de::value::StringDeserializer;
 use serde::{Deserialize, Serialize};
 use sqlx::query;
 use uuid::Uuid;
 
 use crate::player::Player;
-use crate::AppState;
 
 pub trait Game {
     async fn start(self);
@@ -83,7 +81,7 @@ impl Communication{
 impl Game for BotGame {
     async fn start(mut self) {
         let (mut sender, mut receiver) = self.player.sock.split();
-        info!("Hello");
+        info!("Hello : {}" , self.player.id);
 
         sender.send(Message::Text(WHITE_STARTED.clone())).await.unwrap();
 
@@ -132,6 +130,7 @@ impl Game for BotGame {
                         _type: "move".to_string(),
                         data: Some(temp.into_uci(Sides::Black)),
                     };
+                    info!("Sending {:?}" , response);
                     let response = serde_json::to_string(&response).unwrap();
                     sender.send(Message::Text(response)).await.unwrap();
 

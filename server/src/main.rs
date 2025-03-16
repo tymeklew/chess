@@ -1,6 +1,5 @@
 mod auth;
 mod error;
-mod friends;
 mod game;
 mod lobby;
 mod player;
@@ -9,7 +8,7 @@ mod me;
 use crate::game::{BotGame, Game};
 use crate::lobby::Lobby;
 use auth::AuthenticatedUser;
-use axum::extract::ws::{WebSocket};
+use axum::extract::ws::WebSocket;
 use axum::extract::{ConnectInfo, Query, State, WebSocketUpgrade};
 use axum::response::IntoResponse;
 use axum::routing::{any, get, post};
@@ -102,15 +101,6 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/me", get(me::me))
         .route("/api/games/bot" , get(me::bot_games))
         .route("/api/games/competitive" , get(me::player_games))
-        .route("/api/friends/list", get(friends::list_friends))
-        .route("/api/friends/request", post(friends::friend_request))
-        .route("/api/friends/requests/list" , get(friends::list_friend_requests))
-        .route(
-            "/api/friends/response",
-            post(friends::respond_to_friend_request),
-        )
-        .route("/api/friends/cancel", post(friends::cancel_friend_request))
-        .route("/api/friends/search", get(friends::search_user))
         .layer(Extension(state.clone()))
         .route("/api/auth/signup", post(auth::signup))
         .route("/api/auth/login", post(auth::login))
@@ -152,7 +142,7 @@ async fn ws_handler(
 
 async fn handle_socket(
     sock: WebSocket,
-    addr: SocketAddr,
+    _addr: SocketAddr,
     state: Arc<AppState>,
     user: AuthenticatedUser,
     payload: GameQuery,

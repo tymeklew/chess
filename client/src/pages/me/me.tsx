@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "./me.css"
 
 interface BotGame {
     id : string;
@@ -46,10 +47,21 @@ export default function Me() {
                     won : game.won
                 }
             })
+            console.log(temp);
             setBotGames(temp);
         });
         fetch(COMPETITIVE_URL).then(res => res.json()).then(data => {
-            setCompetitiveGames(data);
+            let temp = data.map((game : any) => {
+                return {
+                    user_id : game.user_id,
+                    username : game.username,
+                    started : new Date(game.started),
+                    finished : new Date(game.finished),
+                    winner : game.winner,
+                    white : game.white
+                }
+            })
+            setCompetitiveGames(temp);
         })
     } , [])
     return (
@@ -57,23 +69,32 @@ export default function Me() {
             <h1>Hello {username}</h1>
             <p>Your email is {email} </p> 
 
+            <div className="games">
+            <div className="game-container">
             <h2> Bot Games </h2>
             {
                botGames.map((game : BotGame) => {
                     return <div className="bot-game game" key={game.id}>
-                        <p> Difficulty : {game.difficulty}</p>
-                        <p> {game.won ? "Won" : "Lost"} playing as {game.white ? "Black" : "White"} </p>
+                        <h1> {game.won ? 'Won' : 'Lost'} </h1>
+                        <p> Against <b>{game.difficulty}</b> bot as <b>{game.white ? 'White' : 'Black'}</b></p>
                     </div>
                }) 
             }
+            </div>
+            <div className="game-container">
             <h2> Comp Games </h2>
             {
                 competitiveGames.map((game : PlayerGame) => {
-                    return <div className="competitive-game game" key={game.user_id}>
-                        <p> {game.winner == game.user_id ? "Won" : "Lost"} playing as {game.white ? "Black" : "White"} against {game.username} </p>
+                    let duration_seconds = Math.floor((game.finished.getTime() - game.started.getTime()) / 1000);
+                    let duration_minutes = Math.floor(duration_seconds / 60);
+                    return <div className="competitive-game game" key={Math.random()}>
+                        <h1> {game.winner == game.user_id ? 'Won' : 'Lost'} </h1> 
+                        <p> As <b>{game.white ? 'White' : 'Black'}</b> against <b>{game.username}</b> taking {duration_minutes}:{duration_seconds}</p>
                     </div>
                 })
             }
+            </div>
+            </div>
         </div>
     )
 }

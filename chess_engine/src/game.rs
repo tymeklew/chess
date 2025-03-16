@@ -1,5 +1,5 @@
 use crate::board::Board;
-use crate::{Move, Sides};
+use crate::{Move, Sides, Square};
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum GameStatus {
@@ -13,8 +13,18 @@ pub struct ChessGame {
     turn: Sides,
     board: Board,
     status: GameStatus,
-    history : Vec<Move>
+    history: Vec<Move>,
 }
+
+lazy_static::lazy_static!(
+    pub static ref WHITE_QUEEN_SIDE_ROOK: Square = Square::new(0, 0);
+    pub static ref WHITE_KING: Square = Square::new(4 , 0);
+    pub static ref WHITE_KING_SIDE_ROOK: Square = Square::new(7 , 0);
+
+    pub static ref BLACK_QUEEN_SIDE_ROOK : Square = Square::new(0 , 7);
+    pub static ref BLACK_KING : Square = Square::new(4 , 7);
+    pub static ref BLACK_KING_SIDE_ROOK : Square = Square::new(7 , 7);
+);
 
 impl ChessGame {
     pub fn new() -> Self {
@@ -22,12 +32,16 @@ impl ChessGame {
             board: Board::new(),
             turn: Sides::White,
             status: GameStatus::InProgress,
-            history : Vec::new(),
+            history: Vec::new(),
         }
     }
 
     pub fn status(&self) -> GameStatus {
         self.status
+    }
+
+    pub fn is_over(&self) -> bool {
+        self.status != GameStatus::InProgress
     }
 
     // Funcion to retun all the moves played in UCI seperated by comma
@@ -46,6 +60,23 @@ impl ChessGame {
         if self.status != GameStatus::InProgress {
             return;
         }
+        // Update move rights if king moves side is disabled to castling if rook moves side is disabled
+        if m.source() == *WHITE_KING {
+            self.board.move_rights.white_king_side = false;
+            self.board.move_rights.white_queen_side = false;
+        } else if m.source() == *WHITE_QUEEN_SIDE_ROOK {
+            self.board.move_rights.white_queen_side = false;
+        } else if m.source() == *WHITE_KING_SIDE_ROOK {
+            self.board.move_rights.white_king_side = false;
+        } else if m.source() == *BLACK_KING {
+            self.board.move_rights.black_king_side = false;
+            self.board.move_rights.black_queen_side = false;
+        } else if m.source() == *BLACK_QUEEN_SIDE_ROOK {
+            self.board.move_rights.black_queen_side = false;
+        } else if m.source() == *BLACK_KING_SIDE_ROOK {
+            self.board.move_rights.black_king_side = false;
+        }
+
         m.apply(&mut self.board);
         self.history.push(m);
         self.turn = self.turn.other();

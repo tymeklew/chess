@@ -74,4 +74,5 @@ input {
     outline: none;
     font-weight: bold;
     width: 20%;
+    border-bottom: 1px white solid;
 }

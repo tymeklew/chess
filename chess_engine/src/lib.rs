@@ -8,14 +8,16 @@ mod square;
 
 pub use bot::bot_move;
 pub use game::ChessGame;
+pub use game::GameStatus;
 pub use moves::Move;
 pub use pieces::Sides;
-pub use game::GameStatus;
 pub use square::Square;
 
 #[cfg(test)]
 mod tests {
-    use crate::{board::Board, bot::evaluate, bot_move, ChessGame, Sides};
+    use crate::{
+        attacks::RAY_ATTACKS, board::{Bitboard, Board}, bot::evaluate, bot_move, moves::CastlingSide, ChessGame, Move, Sides
+    };
 
     #[test]
     fn promotion() {
@@ -78,21 +80,15 @@ mod tests {
 
     #[test]
     fn real() {
-        let mut game = ChessGame::new();
-        // Play quickly to test stuff
+        const QUEEN_SIDE_CASTLE: Bitboard = Bitboard(0b1110);
+        const KING_SIDE_CASTLE: Bitboard = Bitboard(0b01100000);
 
-        game.board().display();
-        loop {
-            let mut str = String::new();
-            std::io::stdin().read_line(&mut str).unwrap();
-            let str = str.trim();
-            let mv = game.move_from_uci(str);
-            game.mv(mv.unwrap());
-            game.board().display();
-
-            let mv = bot_move(&game.board(), 3, Sides::Black);
-            game.mv(mv.1.unwrap());
-            game.board().display();
+        let mut board =
+            Board::from_fen("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1".to_string());
+        board.display();
+        for mv in board.legal_moves(Sides::Black) {
+            println!("{}", mv);
         }
+
     }
 }

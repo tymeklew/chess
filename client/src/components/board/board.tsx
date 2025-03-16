@@ -1,8 +1,6 @@
 import { Move, Piece } from "../../pages/shared/interfaces";
-import WhiteRook from "../../assets/white_rook.png";
 import "./board.css";
-import React, { useEffect } from "react";
-import Promotion from "../promotion/promotion";
+import React from "react";
 import { Colour, PieceType } from "../../pages/shared/enum";
 
 interface BoardProps {
@@ -20,16 +18,13 @@ const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 export default function Board(props : BoardProps) {
   function handleTileClick( i : number , j : number , piece : Piece | null) {
     if (!props.myTurn) {
-      console.log(props.myTurn);
       alert("Not your turn");
       return;
     }
     if (piece && piece?.colour == props.side) {
       props.setActiveSquare([i , j]);
     } else {
-      console.log("EVER REACH ");
       if (props.activeSquare) {
-        console.log(props.moves);
         let move = props.moves.find(move => move.from[0] == props.activeSquare?.[1] && move.from[1] == props.activeSquare?.[0] && move.to[0] == j && move.to[1] == i);
         if (move) {
           props.setActiveSquare(null);

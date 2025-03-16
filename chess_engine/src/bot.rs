@@ -39,7 +39,7 @@ pub fn evaluate(board: &Board, side: Sides) -> i32 {
                 * (board.count_piece(Sides::White, Pieces::Pawn)
                     - board.count_piece(Sides::Black, Pieces::Pawn)));
 
-    material 
+    material
 }
 
 pub fn bot_move(board: &Board, depth: usize, side: Sides) -> (i32, Option<Move>) {
@@ -131,8 +131,3 @@ pub fn mini(
 
     return (min, best_move);
 }
-
-/*fn merge_sort(mvs : &Vec<Move>) -> Vec<Move> {
-
-    todo!()
-}*/
